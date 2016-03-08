@@ -1,20 +1,25 @@
 mod KORE is
 === KAST
 --- Since Maude does not allow us to define tokens, we will use wrapped strings as tokens.
---- For example, we cannot write `_+_` in Maude; so we'll write #label("_+_").
+--- For example, we cannot write `_+_` in Maude; so we'll write #Label("_+_").
 --- For maximum clarity, we will also include a separate sort for each type of token.
-  inc STRING .
-  sorts KLabel KToken KVariable KApplication KItem K KList .
-  subsorts KToken KVariable KApplication < KItem < K < KList .
-  op #label : String -> KLabel .
-  op #token : String String -> KToken .
-  op #variable : String String -> KVariable .
-  op _`(_`) : KLabel KList -> KApplication .
+  including STRING .
+  sorts Label Token Variable Application Item K KList .  // we call these "K Label", etc.
+  subsorts Token Variable Application < Item < K < KList .
+  op #Label : String -> Label .
+  op #Token : String String -> Token .
+  op #Variable : String String -> Variable .
+  op _`(_`) : Label KList -> Application .
   op .::K : -> K .
   op _~>_ : K K -> K [assoc id:.::K] .  --- "assoc" has only parsing meaning here; id not needed
   op .::KList : -> KList .
   op _,_ : KList KList -> KList [assoc id:.::KList] .
 --- no support yet for external variables/constants
+----------------------------------
+--- Not sure about _~>_ and _,_ being associative at this level.  Like for other K
+--- definitions, we may want to have a syntax for parsing KORE and another syntax
+--- for the semantics of KORE
+----------------------------------
 
 === K rewriting
 --- Rewrite relation => can be nested and binds as weakly as possible.
@@ -34,44 +39,74 @@ mod KORE is
 --- In the past, I proposed to just use KList for Attributes, but my proposal was rejected.
 --- While I'd like you to reconsider, here is a syntax mimicking the current one.
   sorts AttributeKey Attribute AttributeList .
-  op #attribute : String -> AttributeKey .
+  op #AttributeKey : String -> AttributeKey .
   op _`(_`) : AttributeKey String -> Attribute .
   op .::AttributeList : -> AttributeList .
-  op _,_ : AttributeList Attribute -> AttributeList [assoc id:.AttributeList] .
+  op _,_ : AttributeList Attribute -> AttributeList .
+  op [_] : AttributeList -> Attributes .
 
 === Outer
-  sort KDefinition .
-  op __ : KRequireList KModuleList -> KDefinition .
+  sort Definition .
+  op __ : RequireList ModuleList -> Definition .
 
 --- Maude does not allow and empty constant, so for now we assume explicit .Sort
---- constant for optional parameters.  An alternative can be to use subsorting,
---- for example, subsort KModuleList < KDefinition
+--- constants for optional parameters.  An alternative can be to use subsorting,
+--- for example, subsort ModuleList < Definition, but that can be awkward when
+--- you have multiple empty constants of different sorts next to each other.
+--- When defining sequences of elements, we prefer a left-recursive grammar for
+--- now.
 
-  sorts KRequire KRequireList .
-  subsort KRequire < KRequireList .
-  op require_ : String -> KRequire .
-  op .::KRequireList : -> KRequireList .
-  op __ : KRequireList KRequireList -> KRequireList [assoc id:.::KRequireList] .
+  sorts Require RequireList .
+  op require_ : String -> Require .
+  op .::KRequireList : -> RequireList .
+  op __ : RequireList Require -> RequireList .
 
-  sorts KModule KModuleList .
-  subsort KModule < KModuleList .
-  op module____endmodule : KModuleName OptionalAttributes KImportList KSentenceList -> KModule .
-  op .::KModuleList : -> KModuleList .
-  op __ : KModuleList KModuleList -> KModuleList [assoc id:.::KModuleList] .
+  sorts Module ModuleList .
+  op module___endmodule_ : ModuleName ImportList SentenceList Attributes -> Module .
+  op .::ModuleList : -> ModuleList .
+  op __ : ModuleList Module -> ModuleList .
 
-  op #module : String -> KModuleName .
+  op #ModuleName : String -> ModuleName .
+
+  sorts Import ImportList .
+  op imports_ : ModuleName -> Import .
+  op .::ImportList : -> ImportList .
+  op __ : ImportList Import -> ImportList .
+
+  sorts Sentence SentenceList .
+  op .::SentenceList : -> SentenceList .
+  op __ : SentenceList Sentence -> SentenceList .
+
+  op syntax__ : Sort Attributes -> Sentence .
+  op syntax_::=__ : Sort Production Attributes -> Sentence .
+  op syntax`priority_>__ : Label Label Attributes -> Sentence .
+  op syntax`left__ : Label Attributes -> Sentence .
+  op syntax`right__ : Label Attributes -> Sentence .
+  op syntax`non-assoc__ : Label Attributes -> Sentence .
+
+  op #sort : String -> Sort .
+
+  sorts ProductionItem Production .
+  subsorts Sort String < ProductionItem < Production .
+  op r_ : String -> ProductionItem .
+  op __ : Production ProductionItem -> Production .
+
+  op rule_ : K Attributes -> Sentence .
 
 endm
 
-
 q
-eof
 
 Questions about this definition:
-- do we really need ~> as a K construct?  Can it be a label and thus the way K deald with
-  evaluation contexts just a particular methodology and not an intrisic part of K ?
-  Same question for =>.
-- rename .::K and .::KList to . ?  if we get rid of ~> as above, then we may only need .::KList.
+- do we really need ~> as a K construct?  Can it be a label and thus the way K
+  deal with evaluation contexts just a particular methodology and not an
+  intrisic part of K ? Same question for =>.
+- rename .::K and .::KList to . ?  if we get rid of ~> as above, then we may
+  only need .::KList.
+- Should we allow empty productions instead of sort declarations?  A pro
+  argument is that we have fewer syntactic constructs.  A cons argument is
+  that a sort declaration may be regarded as a different entityr, with
+  different kinds of attributes.
 
 Comments about old kast.k and e-kore.k:
 - Stop having particular module names mean particular things in KORE!  You may do that in full K.
@@ -79,115 +114,4 @@ Comments about old kast.k and e-kore.k:
 - We agree on separating the attrbute listsand arguments  with commas, not spaces.
 - The current attributes are a mixture of K (you use the "token" attribute) and something
   else.  I continue to believe that attributes can be just a KList.
-
-
----------------------
-
-
-  syntax KModule       ::= "module" KModuleName OptionalAttributes
-                                    KImportList
-                                    KSentenceList
-                           "endmodule"
-                               [klabel(#KModule), hook(org.kframework.definition.Module)]
-  syntax KModuleList   ::= ""  [klabel(#emptyKModuleList), onlyLabel]
-                         | KModuleList KModule
-                               [klabel(#KModuleList), assoc, comm, unit(#emptyKModuleList)]
-
-  syntax KImport       ::= "imports" KModuleName
-                               [klabel(#KImport), hook(org.kframework.definition.Import)]
-  syntax KImportList   ::= ""  [klabel(#emptyKImportList), onlyLabel]
-                         | KImportList KImport
-                               [klabel(#KImportList), assoc, comm, unit(#emptyKImportList)]
-
-  syntax KSentenceList ::= ""  [klabel(#emptyKSentenceList), onlyLabel]
-                         | KSentenceList KSentence
-                               [klabel(#KSentenceList), assoc, comm, unit(#kemptyKSentenceList)]
-
-  syntax KSentence ::= "syntax" KSort OptionalAttributes
-                               [klabel(#KSyntaxSort), hook(org.kframework.definition.SyntaxSort)]
-                     | "syntax" KSort "::=" PrioritySeqBlock
-                               [klabel(#KSyntaxProduction), hook(org.kframework.definition.SyntaxProduction)]
-                     | "syntax" "priority"   KPrioritySeq OptionalAttributes
-                               [klabel(#KSyntaxPriority), hook(org.kframework.definition.SyntaxPriority)]
-                     | "syntax" "priorities" KPrioritySeq OptionalAttributes
-                               [klabel(#KSyntaxPriorities), hook(org.kframework.definition.SyntaxPriority)]
-                     | "syntax" "left" KNeTagSet OptionalAttributes
-                               [klabel(#KSyntaxLeft), hook(org.kframework.definition.SyntaxPriority)]
-                     | "syntax" "right" KNeTagSet OptionalAttributes
-                               [klabel(#KSyntaxRight), hook(org.kframework.definition.SyntaxPriority)]
-                     | "syntax" "non-assoc" KNeTagSet OptionalAttributes
-                               [klabel(#KSyntaxNonAssoc), hook(org.kframework.definition.SyntaxPriority)]
-
-  syntax KPrioritySeq ::= KPrioritySeq ">" KNeTagSet   [klabel(#KPrioritySeq), assoc]
-                        | KNeTagSet
-  syntax KNeTagSet    ::= Tag KNeTagSet                [klabel(#KTagSet), assoc, comm]
-                        | Tag
-  syntax Tag ::= KLabel
-
-  syntax KProduction ::= KProductionItem
-                       | KProduction KProductionItem
-                               [klabel(#KProduction), assoc, unit(#emptyKProduction)]
-  syntax KProductionItem ::= KSort       [hook(org.kframework.definition.NonTerminal)]
-                           | KString     [hook(org.kframework.definition.Terminal)]
-                           | "r" KString [hook(org.kframework.definition.RegexTerminal)]
-                           | "Token" "{" TokenContent "}" [klabel(#KPIToken)]
-                           | "Lexer" "{" TokenContent "}" [klabel(#KPILexer)]
-                           | "NeList" "{" KSort "," KString "}" [klabel(#NeList)]
-                           |   "List" "{" KSort "," KString "}" [klabel(#List)]
-  syntax TokenContent ::= r"[^\\n\\r}]" [token]
-  syntax PrioritySeqBlock ::= PrioritySeqBlock ">" AssocAttribute ProdBlock [klabel(#PrioritySeqBlock)]
-                            | ProdBlock
-  syntax AssocAttribute ::= ""           [klabel(#NoAttribute)]
-                          | "left:"      [klabel(#LeftAttribute)]
-                          | "right:"     [klabel(#RightAttribute)]
-                          | "non-assoc:" [klabel(#NonAssocAttribute)]
-  syntax ProdBlock ::= ProdBlock "|" KProductionWAttr [klabel(#ProdBlock)]
-                     | KProductionWAttr
-  syntax KProductionWAttr ::= KProduction OptionalAttributes [klabel(#KProductionWAttr)]
-                            | KLabel "(" KSortList ")" OptionalAttributes [klabel(#KFuncProductionWAttr)]
-                            |        "(" KSortList ")" OptionalAttributes [klabel(#KTupleProductionWAttr)]
-  syntax KSortList ::= KSortList "," KSort [klabel(#KSortList)]
-                     | KSort
-  // We use #KAttributes as top KLabel in the K term holding the attributes
-  syntax OptionalAttributes ::= KAttributesDeclaration
-                              | "" [klabel(#NoKAttributesDeclaration)]
-  syntax KAttributesDeclaration ::= "[" AttrList "]" [klabel(#KAttributesDeclaration), hook(org.kframework.kore.KAttributes)]
-  syntax AttrList ::= AttrList "," Attr [klabel(#KAttributesList)]
-                    | Attr
-
-  syntax KSentence ::= "configuration" Contents
-                               [klabel(#KConfiguration), hook(org.kframework.definition.Configuration)]
-                     | "rule"    Contents
-                               [klabel(#KRule), hook(org.kframework.definition.Rule)]
-                     | "context" Contents
-                               [klabel(#KContext), hook(org.kframework.definition.Context)]
-  syntax Contents ::= Bubble                        [klabel(#NoAttrs)]
-                    | Bubble KAttributesDeclaration [klabel(#Attrs), prefer]
-  // The following can still change
-  syntax KModuleName ::= r"[A-Z][A-Z\\-]*"    [token]
-  syntax KSort       ::= r"[A-Z][A-Za-z0-9]*" [token, hook(org.kframework.definition.Sort)]
-endmodule
-
-
-module E-KORE
-  imports OUTER-KORE
-  imports BUBBLE
-endmodule
-
-------------------
-
-module CONFIG-CELLS
-  imports KCELLS
-  imports RULE-LISTS
-  syntax #CellName ::= r"[a-zA-Z0-9\\-]+"  [token]
-
-  syntax Cell ::= "<" #CellName #CellProperties ">" K "</" #CellName ">" [klabel(#configCell)]
-  syntax Cell ::= "<" #CellName "/>" [klabel(#externalCell)]
-
-  syntax #CellProperties ::= #CellProperty #CellProperties [klabel(#cellPropertyList)]
-                           | ""                            [klabel(#cellPropertyListTerminator)]
-  syntax #CellProperty ::= #CellName "=" KString           [klabel(#cellProperty)]
-
-endmodule
-
-
+- #emptyKProduction was never defined anywhere, but used in KProduction
