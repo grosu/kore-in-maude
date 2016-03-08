@@ -1,19 +1,19 @@
 mod KORE is
-=== KAST
+*** KAST
 --- Since Maude does not allow us to define tokens, we will use wrapped strings as tokens.
 --- For example, we cannot write `_+_` in Maude; so we'll write #Label("_+_").
 --- For maximum clarity, we will also include a separate sort for each type of token.
   including STRING .
-  sorts Label Token Variable Application Item K KList .  // we call these "K Label", etc.
+  sorts Label Token Variable Application Item K KList .  --- we call these "K Label", etc.
   subsorts Token Variable Application < Item < K < KList .
   op #Label : String -> Label .
   op #Token : String String -> Token .
   op #Variable : String String -> Variable .
   op _`(_`) : Label KList -> Application .
-  op .::K : -> K .
-  op _~>_ : K K -> K [assoc id:.::K] .  --- "assoc" has only parsing meaning here; id not needed
-  op .::KList : -> KList .
-  op _,_ : KList KList -> KList [assoc id:.::KList] .
+  op .K : -> K .  --- .::K instead of .K gives a parsing error
+  op _~>_ : K K -> K [assoc id: .K] .  --- "assoc" has only parsing meaning here; id not needed
+  op .KList : -> KList .
+  op _,_ : KList KList -> KList [assoc id: .KList] .
 --- no support yet for external variables/constants
 ----------------------------------
 --- Not sure about _~>_ and _,_ being associative at this level.  Like for other K
@@ -21,31 +21,31 @@ mod KORE is
 --- for the semantics of KORE
 ----------------------------------
 
-=== K rewriting
+*** K rewriting
 --- Rewrite relation => can be nested and binds as weakly as possible.
 --- With => we also need brackets: K1 ~> (K2 ~> K3 => K4 ~> K5) ~> K6
   op _=>_ : K K -> K .  --- macro for "_ -> next _" with the matching logic notation (below)
   op `(_`) : K -> K .
 
-=== Matching logic
+*** Matching logic
 --- We can delay implementing these for now if they raise issues.
   op _/\_ : K K -> K .
   op not_ : K -> K .
   op next_ : K -> K .
-  op exists__ : KVariable K -> K .
+  op exists__ : Variable K -> K .
 --- requires/ensures = sugar: "C[K1 => K2] requires K3 ensures K4" is "C[K1 /\ K3 => K2 /\ K4]"
 
-=== Attributes
+*** Attributes
 --- In the past, I proposed to just use KList for Attributes, but my proposal was rejected.
 --- While I'd like you to reconsider, here is a syntax mimicking the current one.
-  sorts AttributeKey Attribute AttributeList .
+  sorts AttributeKey Attribute AttributeList Attributes .
   op #AttributeKey : String -> AttributeKey .
   op _`(_`) : AttributeKey String -> Attribute .
-  op .::AttributeList : -> AttributeList .
-  op _,_ : AttributeList Attribute -> AttributeList .
+  op .AttributeList : -> AttributeList .
+  op _,_ : Attribute AttributeList -> AttributeList .
   op [_] : AttributeList -> Attributes .
 
-=== Outer
+*** Outer
   sort Definition .
   op __ : RequireList ModuleList -> Definition .
 
@@ -58,24 +58,24 @@ mod KORE is
 
   sorts Require RequireList .
   op require_ : String -> Require .
-  op .::KRequireList : -> RequireList .
-  op __ : RequireList Require -> RequireList .
+  op .RequireList : -> RequireList .
+  op __ : Require RequireList -> RequireList .
 
-  sorts Module ModuleList .
+  sorts ModuleName Module ModuleList .
   op module___endmodule_ : ModuleName ImportList SentenceList Attributes -> Module .
-  op .::ModuleList : -> ModuleList .
-  op __ : ModuleList Module -> ModuleList .
+  op .ModuleList : -> ModuleList .
+  op __ : Module ModuleList -> ModuleList .
 
   op #ModuleName : String -> ModuleName .
 
   sorts Import ImportList .
-  op imports_ : ModuleName -> Import .
-  op .::ImportList : -> ImportList .
-  op __ : ImportList Import -> ImportList .
+  op import_ : ModuleName -> Import .
+  op .ImportList : -> ImportList .
+  op __ : Import ImportList -> ImportList .
 
   sorts Sentence SentenceList .
-  op .::SentenceList : -> SentenceList .
-  op __ : SentenceList Sentence -> SentenceList .
+  op .SentenceList : -> SentenceList .
+  op __ : Sentence SentenceList -> SentenceList .
 
   op syntax__ : Sort Attributes -> Sentence .
   op syntax_::=__ : Sort Production Attributes -> Sentence .
@@ -84,16 +84,52 @@ mod KORE is
   op syntax`right__ : Label Attributes -> Sentence .
   op syntax`non-assoc__ : Label Attributes -> Sentence .
 
+  sort Sort .
   op #sort : String -> Sort .
 
   sorts ProductionItem Production .
   subsorts Sort String < ProductionItem < Production .
   op r_ : String -> ProductionItem .
-  op __ : Production ProductionItem -> Production .
+  op __ : ProductionItem Production -> Production .
 
-  op rule_ : K Attributes -> Sentence .
+  op rule__ : K Attributes -> Sentence .
 
 endm
+
+mod EXAMPLES is
+  including KORE .
+  ops EMPTY IMP : -> Definition .
+
+  eq EMPTY =
+.RequireList
+module #ModuleName("EMPTY")
+  .ImportList
+  .SentenceList
+endmodule [.AttributeList]
+.ModuleList
+  .
+
+  eq IMP =
+.RequireList
+
+module #ModuleName("IMP-SYNTAX")
+  .ImportList
+  .SentenceList
+endmodule [.AttributeList]
+
+module #ModuleName("IMP")
+  .ImportList
+  .SentenceList
+endmodule [.AttributeList]
+
+.ModuleList
+
+  .
+
+endm
+
+rewrite EMPTY .
+rewrite IMP .
 
 q
 
