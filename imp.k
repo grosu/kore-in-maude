@@ -53,6 +53,22 @@ module IMP
                   <state color="red"> .Map </state>
                 </T>
 
+  rule #krun(Init:Map) => initTopCell(Init)  [macro]
+
+  syntax TopCell ::= "<T>" KCell StateCell "</T>"  [structural]
+                   | initTopCell(Map)
+  rule initTopCell(Init:Map) => <T> initKCell(Init:Map) initStateCell </T>
+
+  syntax KCell ::= "<k>" K "</k>"  [maincell, structural]
+  // instead of "maincell" above, we may want to define arbitrary contexts,
+  // somewhat similar to strict; e.g.: syntax K ::= K "~>" K [structural(0,2)]
+  // meaning that the operation itself (0) and the second argument (2) are inferred,
+  // so they need not be mentioned.
+                 | initKCell(Map)
+  rule initKCell(Init:Map) => <k> #rewrite(IMP-SYNTAX-TRANSLATE,
+                                           #parse(IMP-SYNTAX-PARSING,
+                                                  Init[$PGM])) </k>
+
 // AExp
   rule <k> X:Id => I ...</k> <state>... X |-> I ...</state>
   rule I1 / I2 => I1 /Int I2  requires I2 =/=Int 0
