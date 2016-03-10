@@ -48,18 +48,17 @@ module IMP
   imports IMP-SYNTAX
   syntax KResult ::= Int | Bool
 
-  configuration <T color="yellow">
-                  <k color="green"> $PGM:Pgm </k>
-                  <state color="red"> .Map </state>
-                </T>
-
   rule #krun(Init:Map) => initTopCell(Init)  [macro]
+  // previously, we had another attribute, "topcell".  I prefer the above, though,
+  // because it reduces the syntax of KORE on the one hand, and gives us more
+  // flexibility on the other hand.  For example, we may have multiple rules like
+  // above, depending upon the arguments passed to krun.
 
-  syntax TopCell ::= "<T>" KCell StateCell "</T>"  [structural]
+  syntax TopCell ::= "<T>" KCell StateCell "</T>"  [structural, color(yellow)]
                    | initTopCell(Map)
   rule initTopCell(Init:Map) => <T> initKCell(Init:Map) initStateCell </T>
 
-  syntax KCell ::= "<k>" K "</k>"  [maincell, structural]
+  syntax KCell ::= "<k>" K "</k>"  [maincell, structural, color(green)]
   // instead of "maincell" above, we may want to define arbitrary contexts,
   // somewhat similar to strict; e.g.: syntax K ::= K "~>" K [structural(0,2)]
   // meaning that the operation itself (0) and the second argument (2) are inferred,
@@ -68,6 +67,9 @@ module IMP
   rule initKCell(Init:Map) => <k> #rewrite(IMP-SYNTAX-TRANSLATE,
                                            #parse(IMP-SYNTAX-PARSING,
                                                   Init[$PGM])) </k>
+  syntax StateCell ::= "<state>" Map "</state>"  [structural, color(red)]
+                     | "initStateCell"
+  rule initStateCell => <state> .::Map </state>
 
 // AExp
   rule <k> X:Id => I ...</k> <state>... X |-> I ...</state>
@@ -92,3 +94,4 @@ module IMP
     requires notBool (X in keys(Rho))
   rule int .Ids; S => S  [structural]
 endmodule
+
