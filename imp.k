@@ -26,8 +26,10 @@ endmodule
 module IMP-SYNTAX-PROGRAM-PARSING
   import ID-PROGRAM-PARSING
   import IMP-SYNTAX-COMMON
-  syntax Ids ::= "" | NeIds
-  syntax NeIds ::= Id | NeIds "," Id
+  syntax Ids ::= ParsingIds  [klabel(translate)]
+               | translate(ParsingIds)
+  syntax ParsingIds ::= "" | NeParsingIds
+  syntax NeParsingIds ::= Id | NeParsingIds "," Id
 endmodule
 
 module IMP-SYNTAX
@@ -38,10 +40,9 @@ endmodule
 module IMP-SYNTAX-TRANSLATE
   import IMP-SYNTAX-PROGRAM-PARSING
   import IMP-SYNTAX
-  syntax Ids ::= translate(Ids)
-  rule translate() => .Ids
-  rule translate(X:Id) => X
-  rule translate(Xs:NeIds, X:Id) => translate(Xs), X
+  rule translate() => .Ids                            [anywhere]
+  rule translate(X:Id) => X                           [anywhere]
+  rule translate(Xs:NeIds, X:Id) => translate(Xs), X  [anywhere]
 endmodule
 
 module IMP
@@ -65,8 +66,8 @@ module IMP
   // so they need not be mentioned.
                  | initKCell(Map)
   rule initKCell(Init:Map) => <k> #rewrite(IMP-SYNTAX-TRANSLATE,
-                                           translate(#parse(IMP-SYNTAX-PARSING,
-                                                            Init[$PGM]))) </k>
+                                           #parse(IMP-SYNTAX-PARSING,
+                                                  Init[$PGM])) </k>
 
   syntax StateCell ::= "<state>" Map "</state>"  [structural, color(red)]
                      | "initStateCell"
