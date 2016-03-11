@@ -65,8 +65,9 @@ module IMP
   // so they need not be mentioned.
                  | initKCell(Map)
   rule initKCell(Init:Map) => <k> #rewrite(IMP-SYNTAX-TRANSLATE,
-                                           #parse(IMP-SYNTAX-PARSING,
-                                                  Init[$PGM])) </k>
+                                           translate(#parse(IMP-SYNTAX-PARSING,
+                                                            Init[$PGM]))) </k>
+
   syntax StateCell ::= "<state>" Map "</state>"  [structural, color(red)]
                      | "initStateCell"
   rule initStateCell => <state> .::Map </state>
@@ -90,7 +91,7 @@ module IMP
   rule if (false) _ else S => S
   rule while (B) S => if (B) {S while (B) S} else {}  [structural]
 // Pgm
-  rule <k> int (X,Xs => Xs);_ </k> <state> Rho:Map (.Map => X|->0) </state>
+  rule <k> int (X:Id => .Ids),_;_ </k> <state> Rho:Map (.Map => X|->0) </state>
     requires notBool (X in keys(Rho))
   rule int .Ids; S => S  [structural]
 endmodule
