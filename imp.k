@@ -1,4 +1,4 @@
-requires domains.k
+requires "domains.k"
 
 module IMP-SYNTAX-COMMON
   import DOMAINS
@@ -68,6 +68,11 @@ module IMP
   rule initKCell(Init:Map) => <k> #rewrite(IMP-SYNTAX-TRANSLATE,
                                            #parse(IMP-SYNTAX-PARSING,
                                                   Init[$PGM])) </k>
+  // Since #parse and #rewrite can potentially yield terms which are not well-formed
+  // in the current context, Cosmin proposed to wrap them with some "warning" label,
+  // which is ignored at runtime but statically it inhibits the checking of
+  // well-formedness of its argument; or we may want to also give a module to that
+  // wrapper, saying in what module that term should make sense.
 
   syntax StateCell ::= "<state>" Map "</state>"  [structural, color(red)]
                      | "initStateCell"

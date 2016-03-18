@@ -42,7 +42,7 @@ mod KORE is
   op #AttributeKey : String -> AttributeKey .
   op _`(_`) : AttributeKey String -> Attribute .
   op .AttributeList : -> AttributeList .
-  op _,_ : Attribute AttributeList -> AttributeList .
+  op _,_ : Attribute AttributeList -> AttributeList [format(d d s d)] .
   op [_] : AttributeList -> Attributes .
 
 *** Outer
@@ -57,35 +57,35 @@ mod KORE is
 --- now.
 
   sorts Require RequireList .
-  op require_ : String -> Require .
-  op .RequireList : -> RequireList .
+  op require_ : String -> Require [format(n d d)] .
+  op .RequireList : -> RequireList [format(n n)] .
   op __ : Require RequireList -> RequireList .
 
   sorts ModuleName Module ModuleList .
-  op module___endmodule_ : ModuleName ImportList SentenceList Attributes -> Module .
-  op .ModuleList : -> ModuleList .
+  op module___endmodule_ : ModuleName ImportList SentenceList Attributes -> Module [format(n d ++i d --in d n)] .
+  op .ModuleList : -> ModuleList [format(n d)] .
   op __ : Module ModuleList -> ModuleList .
 
   op #ModuleName : String -> ModuleName .
 
   sorts Import ImportList .
-  op import_ : ModuleName -> Import .
-  op .ImportList : -> ImportList .
+  op import_ : ModuleName -> Import [format(ni d d)] .
+  op .ImportList : -> ImportList [format(ni d)] .
   op __ : Import ImportList -> ImportList .
 
   sorts Sentence SentenceList .
-  op .SentenceList : -> SentenceList .
+  op .SentenceList : -> SentenceList [format(ni d)] .
   op __ : Sentence SentenceList -> SentenceList .
 
   op syntax__ : Sort Attributes -> Sentence .
-  op syntax_::=__ : Sort Production Attributes -> Sentence .
+  op syntax_::=__ : Sort Production Attributes -> Sentence [format(ni d d d n++i-- d)] .
   op syntax`priority_>__ : Label Label Attributes -> Sentence .
   op syntax`left__ : Label Attributes -> Sentence .
   op syntax`right__ : Label Attributes -> Sentence .
   op syntax`non-assoc__ : Label Attributes -> Sentence .
 
   sort Sort .
-  op #sort : String -> Sort .
+  op #Sort : String -> Sort .
 
   sorts ProductionItem Production .
   subsorts Sort String < ProductionItem < Production .
@@ -110,14 +110,43 @@ endmodule [.AttributeList]
   .
 
   eq IMP =
+require "domains.k"
 .RequireList
 
+module #ModuleName("IMP-SYNTAX-COMMON")
+  import #ModuleName("DOMAINS")
+  .ImportList
+  syntax #Sort("AExp") ::= #Sort("Int") [.AttributeList]
+  syntax #Sort("AExp") ::= #Sort("Id") [.AttributeList]
+  syntax #Sort("AExp") ::= #Sort("AExp") "/" #Sort("AExp")
+    [#AttributeKey("left")(""), #AttributeKey("strict")(""), .AttributeList]
+  syntax #Sort("AExp") ::= #Sort("AExp") "+" #Sort("AExp")
+    [#AttributeKey("left")(""), #AttributeKey("strict")(""), .AttributeList]
+  syntax #Sort("AExp") ::= "(" #Sort("AExp") ")"
+    [#AttributeKey("bracket")(""), .AttributeList]
+  .SentenceList
+endmodule [.AttributeList]
+
+module #ModuleName("IMP-SYNTAX-PROGRAM-PARSING")
+  .ImportList
+  .SentenceList
+endmodule [.AttributeList]
+
 module #ModuleName("IMP-SYNTAX")
+  import #ModuleName("IMP-SYNTAX-COMMON")
+  .ImportList
+  .SentenceList
+endmodule [.AttributeList]
+
+module #ModuleName("IMP-SYNTAX-TRANSLATE")
+  import #ModuleName("IMP-SYNTAX-PROGRAM-PARSING")
+  import #ModuleName("IMP-SYNTAX")
   .ImportList
   .SentenceList
 endmodule [.AttributeList]
 
 module #ModuleName("IMP")
+  import #ModuleName("IMP-SYNTAX")
   .ImportList
   .SentenceList
 endmodule [.AttributeList]
@@ -128,7 +157,7 @@ endmodule [.AttributeList]
 
 endm
 
-rewrite EMPTY .
+---rewrite EMPTY .
 rewrite IMP .
 
 q
@@ -143,6 +172,8 @@ Questions about this definition:
   argument is that we have fewer syntactic constructs.  A cons argument is
   that a sort declaration may be regarded as a different entityr, with
   different kinds of attributes.
+- Should we add constant AttributeKeys which have special semantics, like
+  "strict", as constants?
 
 Comments about old kast.k and e-kore.k:
 - Stop having particular module names mean particular things in KORE!  You may do that in full K.
