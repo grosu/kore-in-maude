@@ -4,12 +4,13 @@ mod KORE is
 --- For example, we cannot write `_+_` in Maude; so we'll write #Label("_+_").
 --- For maximum clarity, we will also include a separate sort for each type of token.
   including STRING .
-  sorts Label Token Variable Application Item K KList .  --- we call these "K Label", etc.
+  sorts Label Token Variable Application Item K KList Sort .  --- we call these "K Label", etc.
   subsorts Token Variable Application < Item < K < KList .
   op #Label : String -> Label .
-  op #Token : String String -> Token .
-  op #Variable : String String -> Variable .
-  op _`(_`) : Label KList -> Application .
+  op #Token : Sort String -> Token . --- Cosmin: if we have sorts, it may be good to have them explicitly "String String" is confusing
+  op #Sort : String -> Sort .
+  op #Variable : Sort String -> Variable .
+  op _`(_`) : Label KList -> Application . --- Cosmin: would it be correct to "Application => Term"?
   op .K : -> K .  --- .::K instead of .K gives a parsing error
   op _~>_ : K K -> K [assoc id: .K] .  --- "assoc" has only parsing meaning here; id not needed
   op .KList : -> KList .
@@ -19,6 +20,7 @@ mod KORE is
 --- Not sure about _~>_ and _,_ being associative at this level.  Like for other K
 --- definitions, we may want to have a syntax for parsing KORE and another syntax
 --- for the semantics of KORE
+--- Cosmin: yes, the assoc problem for KList seems the same as the usual user lists problem, just at the meta-level
 ----------------------------------
 
 *** K rewriting
@@ -34,6 +36,8 @@ mod KORE is
   op next_ : K -> K .
   op exists__ : Variable K -> K .
 --- requires/ensures = sugar: "C[K1 => K2] requires K3 ensures K4" is "C[K1 /\ K3 => K2 /\ K4]"
+--- Cosmin: yes, and it may be nice to move away from the sugar. "C[K1 /\ K3 => K2 /\ K4]" is both shorter and clearer. 
+---         also, even in the current Java backend implementation, /\ would work well and be faster
 
 *** Attributes
 --- In the past, I proposed to just use KList for Attributes, but my proposal was rejected.
@@ -44,6 +48,9 @@ mod KORE is
   op .AttributeList : -> AttributeList .
   op _,_ : Attribute AttributeList -> AttributeList [format(d d s d)] .
   op [_] : AttributeList -> Attributes .
+--- Cosmin: from my perspective, if we allow parsing empty KLists from "" instead of ".KList" (the same trick we do for user lists), 
+--- using labeled syntax for attributes should work well. It's annoying to write "foo(a, .KList)" and "foo(.KList)", but "foo(a)" 
+--- and "foo()" work well.
 
 *** Outer
   sort Definition .
@@ -220,18 +227,30 @@ Questions about this definition:
 - do we really need ~> as a K construct?  Can it be a label and thus the way K
   deal with evaluation contexts just a particular methodology and not an
   intrisic part of K ? Same question for =>.
+  Cosmin: Syntacticly at least, I would say "no" for both. From the implementation
+  perspective, this will simplify traversal code even further. 
 - rename .::K and .::KList to . ?  if we get rid of ~> as above, then we may
   only need .::KList.
+  Cosmin: I agree.
 - Should we allow empty productions instead of sort declarations?  A pro
   argument is that we have fewer syntactic constructs.  A cons argument is
   that a sort declaration may be regarded as a different entityr, with
   different kinds of attributes.
+  Cosmin: I don't quite follow.
 - Should we add constant AttributeKeys which have special semantics, like
   "strict", as constants?
+  Cosmin: we may want to discuss the attribute syntax separately.
 - Brackets and disappearing injections are the same thing, arent's they?  A
   production which only has one non-terminal and the production disappears
   from the AST.
+  Cosmin: Yes, I also think they can be seen as the same thing. That being
+          said, I would really like for injections to not dissapear. If something
+          is meant to dissapear, it should be declared as a subsort. And the
+          dissapearing injections (including subsorts) could be done via rules as
+          we discussed before.
 - Should #Label contain more structured information than just a String?
+  Cosmin: From my perspective, its semantics and any other information should live
+          with the definition (module), not within the label.
 
 Comments about old kast.k and e-kore.k:
 - Stop having particular module names mean particular things in KORE!  You may do that in full K.
@@ -239,4 +258,5 @@ Comments about old kast.k and e-kore.k:
 - We agree on separating the attrbute listsand arguments  with commas, not spaces.
 - The current attributes are a mixture of K (you use the "token" attribute) and something
   else.  I continue to believe that attributes can be just a KList.
+  Cosmin: the attributes are definetely messed up and we should discuss and agree on them
 - #emptyKProduction was never defined anywhere, but used in KProduction
