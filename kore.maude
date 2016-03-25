@@ -13,7 +13,7 @@ mod KORE is
   op .K : -> K .  --- .::K instead of .K gives a parsing error
   op _~>_ : K K -> K [assoc id: .K] .  --- "assoc" has only parsing meaning here; id not needed
   op .KList : -> KList .
-  op _,_ : KList KList -> KList [assoc id: .KList] .
+  op _,_ : KList KList -> KList [assoc id: .KList prec 100] .  --- prec seems to be required ...
 --- no support yet for external variables/constants
 ----------------------------------
 --- Not sure about _~>_ and _,_ being associative at this level.  Like for other K
@@ -25,7 +25,7 @@ mod KORE is
 --- Rewrite relation => can be nested and binds as weakly as possible.
 --- With => we also need brackets: K1 ~> (K2 ~> K3 => K4 ~> K5) ~> K6
   op _=>_ : K K -> K .  --- macro for "_ -> next _" with the matching logic notation (below)
-  op `(_`) : K -> K .
+---  op `(_`) : K -> K .  --- Maude uses parentheses for grouping already
 
 *** Matching logic
 --- We can delay implementing these for now if they raise issues.
@@ -92,7 +92,7 @@ mod KORE is
   op r_ : String -> ProductionItem .
   op __ : ProductionItem Production -> Production .
 
-  op rule__ : K Attributes -> Sentence .
+  op rule__ : K Attributes -> Sentence [format(ni d n++i-- d)] .
 
 endm
 
@@ -113,41 +113,93 @@ endmodule [.AttributeList]
 require "domains.k"
 .RequireList
 
+
 module #ModuleName("IMP-SYNTAX-COMMON")
   import #ModuleName("DOMAINS")
   .ImportList
+
   syntax #Sort("AExp") ::= #Sort("Int") [.AttributeList]
   syntax #Sort("AExp") ::= #Sort("Id") [.AttributeList]
   syntax #Sort("AExp") ::= #Sort("AExp") "/" #Sort("AExp")
-    [#AttributeKey("left")(""), #AttributeKey("strict")(""), .AttributeList]
+    [#AttributeKey("left")(""), #AttributeKey("strict")(""), #AttributeKey("klabel")("_/_ : AExp * AExp ->  AExp"), .AttributeList]
   syntax #Sort("AExp") ::= #Sort("AExp") "+" #Sort("AExp")
-    [#AttributeKey("left")(""), #AttributeKey("strict")(""), .AttributeList]
+    [#AttributeKey("left")(""), #AttributeKey("strict")(""), #AttributeKey("klabel")("_+_ : AExp * AExp ->  AExp"), .AttributeList]
   syntax #Sort("AExp") ::= "(" #Sort("AExp") ")"
-    [#AttributeKey("bracket")(""), .AttributeList]
+    [#AttributeKey("bracket")(""), #AttributeKey("klabel")("(_) : AExp -> AExp"), .AttributeList]
+  syntax priority #Label("_/_ : AExp * AExp ->  AExp") > #Label("_+_ : AExp * AExp ->  AExp")
+    [.AttributeList]
+
+  syntax #Sort("BExp") ::= #Sort("Bool") [.AttributeList]
+  syntax #Sort("BExp") ::= #Sort("AExp") "<=" #Sort("AExp")
+    [#AttributeKey("seqstrict")(""), #AttributeKey("latex")("{#1}\leq{#2}"), #AttributeKey("klabel")("_<=_"), .AttributeList]
+
+--- more to come here, but let's first converge on details
+
   .SentenceList
 endmodule [.AttributeList]
 
+
 module #ModuleName("IMP-SYNTAX-PROGRAM-PARSING")
+  import #ModuleName("ID-PROGRAM-PARSING")
+  import #ModuleName("IMP-SYNTAX-COMMON")
   .ImportList
+
+--- more to come here, but let's first converge on details
   .SentenceList
 endmodule [.AttributeList]
+
 
 module #ModuleName("IMP-SYNTAX")
   import #ModuleName("IMP-SYNTAX-COMMON")
   .ImportList
+
+  syntax #Sort("Ids") ::= ".Ids"
+    [#AttributeKey("klabel")(".Ids : -> Ids"), .AttributeList]
+  syntax #Sort("Ids") ::= #Sort("Id")
+    [.AttributeList]
+  syntax #Sort("Ids") ::= #Sort("Ids") "," #Sort("Ids")
+    [#AttributeKey("assoc")(""), #AttributeKey("unit")(".Ids : -> Ids"), .AttributeList]
+
+--- more to come here, but let's first converge on details
   .SentenceList
 endmodule [.AttributeList]
+
 
 module #ModuleName("IMP-SYNTAX-TRANSLATE")
   import #ModuleName("IMP-SYNTAX-PROGRAM-PARSING")
   import #ModuleName("IMP-SYNTAX")
   .ImportList
+--- more to come here, but let's first converge on details
   .SentenceList
 endmodule [.AttributeList]
+
 
 module #ModuleName("IMP")
   import #ModuleName("IMP-SYNTAX")
   .ImportList
+
+--- more to come here, but let's first converge on details
+
+--- We need to discuss the rule below before we can continue.
+---  rule <k> X = I:Int; => . ...</k> <state>... X |-> (_ => I) ...</state>
+  rule #Label("...")(
+         #Label("...")(.KList),
+         #Label("<k>_</k> : K -> KCell") (
+           (#Label("_=_; : Id * AExp -> Stmt")(#Variable("X", "Id"), #Variable("I", "Int"))
+            => .K)
+           ~> #Label("...")(.KList)
+         ),
+         #Label("...")(.KList),
+         #Label("<state>_</state> : Map -> StateCell")(
+           #Label("...")(.KList),
+
+           #Label("...")(.KList)
+         ),
+         #Label("...")(.KList)
+       )
+    [.AttributeList]
+
+--- more to come here, but let's first converge on details
   .SentenceList
 endmodule [.AttributeList]
 
@@ -159,6 +211,8 @@ endm
 
 ---rewrite EMPTY .
 rewrite IMP .
+
+---set print mixfix off .
 
 q
 
@@ -174,6 +228,10 @@ Questions about this definition:
   different kinds of attributes.
 - Should we add constant AttributeKeys which have special semantics, like
   "strict", as constants?
+- Brackets and disappearing injections are the same thing, arent's they?  A
+  production which only has one non-terminal and the production disappears
+  from the AST.
+- Should #Label contain more structured information than just a String?
 
 Comments about old kast.k and e-kore.k:
 - Stop having particular module names mean particular things in KORE!  You may do that in full K.
