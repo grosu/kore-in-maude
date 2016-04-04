@@ -2,24 +2,30 @@ mod KORE is
 *** KAST
 --- Since Maude does not allow us to define tokens, we will use wrapped strings as tokens.
 --- For example, we cannot write `_+_` in Maude; so we'll write #Label("_+_").
+--- In fact, this may be a good idea anyway for KORE, to keep things super-simple.
 --- For maximum clarity, we will also include a separate sort for each type of token.
   including STRING .
-  sorts Label Token Variable Application Item K KList .  --- we call these "K Label", etc.
+  sorts Label Token Variable Application Item K KList Sort . --- we call these "K Label", etc.
   subsorts Token Variable Application < Item < K < KList .
   op #Label : String -> Label .
-  op #Token : String String -> Token .
-  op #Variable : String String -> Variable .
-  op _`(_`) : Label KList -> Application .
+  op #Sort : String -> Sort .
+  op #Token : String Sort -> Token .
+  op #Variable : String Sort -> Variable .
+  op _`(_`) : Label KList -> Application . --- Maude requires to escape parentheses
   op .K : -> K .  --- .::K instead of .K gives a parsing error
-  op _~>_ : K K -> K [assoc id: .K] .  --- "assoc" has only parsing meaning here; id not needed
+  op _~>_ : K K -> K .
+--- We are defining the KORE syntax for parsing here; in a KORE syntax for the
+--- semantics of K we may want this operation to be associative, like below
+---  op _~>_ : K K -> K [assoc id: .K] .
+--- Note that we cannot define it as `_~>_ : Item K -> K` because we still want
+--- to allow to match an Item in the middle of a K sequence.
   op .KList : -> KList .
-  op _,_ : KList KList -> KList [assoc id: .KList prec 100] .  --- prec seems to be required ...
---- no support yet for external variables/constants
-----------------------------------
---- Not sure about _~>_ and _,_ being associative at this level.  Like for other K
---- definitions, we may want to have a syntax for parsing KORE and another syntax
---- for the semantics of KORE
-----------------------------------
+  op _,_ : KList KList -> KList [gather(e E) prec 100] .  --- prec seems to be required ...
+--- gather attribute makes _,_ parse as right associative
+--- Same comment like for ~> above; in a syntax for semantics, we probably want:
+---  op _,_ : KList KList -> KList [assoc id: .KList prec 100] .
+
+--- No support yet for external variables/constants
 
 *** K rewriting
 --- Rewrite relation => can be nested and binds as weakly as possible.
@@ -33,7 +39,9 @@ mod KORE is
   op not_ : K -> K .
   op next_ : K -> K .
   op exists__ : Variable K -> K .
---- requires/ensures = sugar: "C[K1 => K2] requires K3 ensures K4" is "C[K1 /\ K3 => K2 /\ K4]"
+--- No requires/ensures anymore; these are just syntactic sugar, which we do not
+--- encourage or support anymore:
+--- "C[K1 => K2] requires K3 ensures K4" is "C[K1 /\ K3 => K2 /\ K4]"
 
 *** Attributes
 --- In the past, I proposed to just use KList for Attributes, but my proposal was rejected.
@@ -83,9 +91,6 @@ mod KORE is
   op syntax`left__ : Label Attributes -> Sentence .
   op syntax`right__ : Label Attributes -> Sentence .
   op syntax`non-assoc__ : Label Attributes -> Sentence .
-
-  sort Sort .
-  op #Sort : String -> Sort .
 
   sorts ProductionItem Production .
   subsorts Sort String < ProductionItem < Production .
@@ -183,16 +188,18 @@ module #ModuleName("IMP")
 --- We need to discuss the rule below before we can continue.
 ---  rule <k> X = I:Int; => . ...</k> <state>... X |-> (_ => I) ...</state>
   rule #Label("...")(
-         #Label("...")(.KList),
          #Label("<k>_</k> : K -> KCell") (
-           (#Label("_=_; : Id * AExp -> Stmt")(#Variable("X", "Id"), #Variable("I", "Int"))
-            => .K)
-           ~> #Label("...")(.KList)
+           (#Label("_=_; : Id * AExp -> Stmt")(
+              #Variable("X", #Sort("Id")), #Variable("I", #Sort("Int")))
+            => .K),
+           #Label("...")(.KList)
          ),
-         #Label("...")(.KList),
          #Label("<state>_</state> : Map -> StateCell")(
            #Label("...")(.KList),
-
+           #Label("_|->_ : Id * Int -> Map")(
+             #Variable("X", #Sort("Id")),
+             #Variable("_", #Sort("Int")) => #Variable("I", #Sort("Int"))
+           ),
            #Label("...")(.KList)
          ),
          #Label("...")(.KList)
