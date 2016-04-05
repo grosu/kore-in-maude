@@ -201,8 +201,7 @@ module #ModuleName("IMP")
              #Variable("_", #Sort("Int")) => #Variable("I", #Sort("Int"))
            ),
            #Label("...")(.KList)
-         ),
-         #Label("...")(.KList)
+         )
        )
     [.AttributeList]
 
