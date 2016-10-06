@@ -1,3 +1,14 @@
+***(
+Remember the syntax of matching logic:
+
+  Variable ::= Id ":" Sort  
+  Pattern ::= Var:Sort  // sorted variables
+            | sigma(Pattern,...,Pattern)  // sigma in Sigma
+            | not Pattern
+            | Pattern /\ Pattern
+            | 
+***)
+
 mod KORE is
 *** KAST
 --- Since Maude does not allow us to define tokens, we will use wrapped strings as tokens.
