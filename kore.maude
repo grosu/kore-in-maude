@@ -1,30 +1,39 @@
 ***(
+KORE design principles:
+- attributes have no semantic meaning (they may have in frontends)
+-- they only give additional info to backends
+- no semantic loss when translating to KORE
+-- same amount of "true concurrency", in particular
+
 Remember the syntax of matching logic:
 
-  Variable ::= Id ":" Sort  
-  Pattern ::= Var:Sort  // sorted variables
+  Pattern ::= Variable
             | sigma(Pattern,...,Pattern)  // sigma in Sigma
             | not Pattern
             | Pattern /\ Pattern
-            | 
+            | exists Variable . Pattern
+
+Syntax of matching logic is sorted in theory, but we prefer to work
+with unsorted in KORE, to give us more freedom.
+Sorts can be recovered using membership patterns.
 ***)
 
 mod KORE is
 *** KAST
 --- Since Maude does not allow us to define tokens, we will use wrapped strings as tokens.
 --- For example, we cannot write `_+_` in Maude; so we'll write #Label("_+_").
---- In fact, this may be a good idea anyway for KORE, to keep things super-simple.
+--- In fact, this is good anyway for KORE, to keep things super-simple.
 --- For maximum clarity, we will also include a separate sort for each type of token.
-  including STRING .
-  sorts Label Token Variable Application Item K KList Sort . --- we call these "K Label", etc.
+  including STRING .  // the only external syntax
+
+  sorts Label Token Variable Application Item K KList . --- we call these "K Label", etc.
   subsorts Token Variable Application < Item < K < KList .
   op #Label : String -> Label .
-  op #Sort : String -> Sort .
   op #Token : String Sort -> Token .
   op #Variable : String Sort -> Variable .
-  op _`(_`) : Label KList -> Application . --- Maude requires to escape parentheses
-  op .K : -> K .  --- .::K instead of .K gives a parsing error
-  op _~>_ : K K -> K .
+  op _`(_`) : Label KList -> Application . --- Maude requires ` to escape parentheses
+//  op .K : -> K .  --- .::K instead of .K gives a parsing error
+//  op _~>_ : K K -> K .
 --- We are defining the KORE syntax for parsing here; in a KORE syntax for the
 --- semantics of K we may want this operation to be associative, like below
 ---  op _~>_ : K K -> K [assoc id: .K] .
@@ -35,6 +44,9 @@ mod KORE is
 --- gather attribute makes _,_ parse as right associative
 --- Same comment like for ~> above; in a syntax for semantics, we probably want:
 ---  op _,_ : KList KList -> KList [assoc id: .KList prec 100] .
+
+  sort Sort .
+  op #Sort : String -> Sort .
 
 --- No support yet for external variables/constants
 
