@@ -1,0 +1,43 @@
+mod CXT is
+
+  sort K .
+
+  op top : K K -> K .
+  op k : K -> K .
+  op seq : K K -> K .
+  op skip : -> K .
+  op asgn : K K -> K .
+  ops a b 0 1 2 3 4 5 6 7 8 9 : -> K .
+  op state : K -> K .
+  op map : K K -> K .
+  op bind : K K -> K .
+  op emptymap : -> K .
+
+  op gamma_._ : K K -> K .
+  op hole : -> K .
+  op _[_] : K K -> [K] [frozen(2)] .
+  
+  var C K S X V : K .
+
+  rl (gamma hole . hole)[K] => K .
+  rl K => (gamma hole . hole)[K] .
+
+  rl (gamma hole . top(C[hole],S))[K] => top(C[K],S) .
+  rl top(C[K],S) => (gamma hole . top(C[hole],S))[K] .
+
+  rl (gamma hole . k(C[hole]))[K] => k(C[K]) .
+  rl k(C[K]) => (gamma hole . k(C[hole]))[K] .
+
+  rl (gamma hole . seq(C[hole],S))[K] => seq(C[K],S) .
+  rl seq(C[K],S) => (gamma hole . seq(C[hole],S))[K] .
+
+endm
+
+search [1] top(k(a),b) =>* C[a] .
+
+q
+
+search top(k(seq(asgn(b,7), seq(asgn(a,3), skip))), state(map(bind(a,1), map(bind(b,3), emptymap))))
+=>* C[seq(K,S)] .
+
+q
