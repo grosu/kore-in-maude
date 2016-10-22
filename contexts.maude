@@ -2,6 +2,7 @@ mod CXT is
 
   sort K .
 
+---(
   op top : K K -> K .
   op k : K -> K .
   op seq : K K -> K .
@@ -19,7 +20,7 @@ mod CXT is
   
   var C K S X V : K .
 
-  rl (gamma hole . hole)[K] => K .
+---  rl (gamma hole . hole)[K] => K .
   rl K => (gamma hole . hole)[K] .
 
   rl (gamma hole . top(C[hole],S))[K] => top(C[K],S) .
@@ -30,8 +31,28 @@ mod CXT is
 
   rl (gamma hole . seq(C[hole],S))[K] => seq(C[K],S) .
   rl seq(C[K],S) => (gamma hole . seq(C[hole],S))[K] .
+---)
+
+  op if : K K K -> K .
+  op leq : K K -> K .
+  ops a b s1 s2 : -> K .
+
+  op gamma_._ : K K -> K .
+  op hole : -> [K] .
+
+  vars K S1 S2 : K .
+  op _[_] : K K -> K .  --- frozen(2) ?
+
 
 endm
+
+search if(leq(a,b),s1,s2) =>* K .
+
+rew gamma hole . hole .
+
+q
+
+eof
 
 search [1] top(k(a),b) =>* C[a] .
 
