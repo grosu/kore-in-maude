@@ -1,6 +1,8 @@
 mod CXT is
+  pr NAT .
 
-  sort K .
+  sorts K .
+  subsorts Nat < K .
 
 ---(
   op top : K K -> K .
@@ -20,7 +22,7 @@ mod CXT is
   
   var C K S X V : K .
 
----  rl (gamma hole . hole)[K] => K .
+***  rl (gamma hole . hole)[K] => K .
   rl K => (gamma hole . hole)[K] .
 
   rl (gamma hole . top(C[hole],S))[K] => top(C[K],S) .
@@ -37,19 +39,25 @@ mod CXT is
   op leq : K K -> K .
   ops a b s1 s2 : -> K .
 
-  op gamma_._ : K K -> K .
-  op hole : -> [K] .
+  op gamma_ : K -> K .
 
-  vars K S1 S2 : K .
+  vars K K1 K2 K3 : K .
   op _[_] : K K -> K .  --- frozen(2) ?
 
-  rl if(K,S1,S2) => (gamma hole . if(hole,S1,S2))[K]
+--- rl if(K1,K2,K3) => (gamma if(0,K2,K3))[K1] .
+ crl if(K1,K2,K3) => (gamma if(0,K2,K3))[K1] if not (K1 :: Nat) .
+  rl (gamma if(0,K2,K3))[K1] => if(K1,K2,K3) .
+
+ crl leq(K1,K2) => (gamma leq(0,K2))[K1] if not (K1 :: Nat) .
+  rl (gamma leq(0,K2))[K1] => leq(K1,K2) .
+
+ crl leq(K1,K2) => (gamma leq(K1,0))[K2] if not (K2 :: Nat) .
+  rl (gamma leq(K1,0))[K2] => leq(K1,K2) .
 
 endm
 
-search if(leq(a,b),s1,s2) =>* K .
 
-rew gamma hole . hole .
+search if(leq(a,b),s1,s2) =>* K .
 
 q
 
