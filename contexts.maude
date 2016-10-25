@@ -43,6 +43,7 @@ mod CXT is
   vars K S1 S2 : K .
   op _[_] : K K -> K .  --- frozen(2) ?
 
+  rl if(K,S1,S2) => (gamma hole . if(hole,S1,S2))[K]
 
 endm
 
