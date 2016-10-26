@@ -1,61 +1,79 @@
+mod K is
+  sorts K KList Label Token .
+  subsorts Token < K < KList .
+  op _`(_`) : Label KList -> K [prec 0] .
+  op .KList : -> KList .
+  op _,_ : KList KList -> KList [assoc id: .KList] .
+endm
+
 mod CXT is
-  pr NAT .
+  inc K .
+  pr INT .
 
-  sorts K .
-  subsorts Nat < K .
+  subsorts Int < K .
 
----(
-  op top : K K -> K .
-  op k : K -> K .
-  op seq : K K -> K .
-  op skip : -> K .
-  op asgn : K K -> K .
-  ops a b 0 1 2 3 4 5 6 7 8 9 : -> K .
-  op state : K -> K .
-  op map : K K -> K .
-  op bind : K K -> K .
-  op emptymap : -> K .
+  op gamma_ : K -> K [gather(&)] .
+  op _[_] : K KList -> K [prec 0] .
+  op _[[_]] : K KList -> K [prec 0] .
 
-  op gamma_._ : K K -> K .
-  op hole : -> K .
-  op _[_] : K K -> [K] [frozen(2)] .
-  
-  var C K S X V : K .
+  op _[_/_] : K     K Int -> K     [prec 0] .
+  op _[_/_] : KList K Int -> KList [prec 0] .
 
-***  rl (gamma hole . hole)[K] => K .
-  rl K => (gamma hole . hole)[K] .
+  ops up down : K -> K .
+  op move : K     Int Int -> K     .
+  op move : KList Int Int -> KList .
 
-  rl (gamma hole . top(C[hole],S))[K] => top(C[K],S) .
-  rl top(C[K],S) => (gamma hole . top(C[hole],S))[K] .
+  var K K' C C1 C2 K1 : K .
+  var L : Label .
+  var Ks Ks1 Ks2 : KList .
+  var N M D : Int .
+  var T : Token .
+--- Context application uses the de Bruijn "substitution".
+  rl (gamma C)[K] => down(C[up(K) / 1]) .
+  eq (gamma C)[[K]] = down(C[up(K) / 1]) .
 
-  rl (gamma hole . k(C[hole]))[K] => k(C[K]) .
-  rl k(C[K]) => (gamma hole . k(C[hole]))[K] .
+--- De Bruijn substitution: uses de Bruijn lifting
+  eq (L(Ks))[K / N] = L(Ks[K / N]) .
+ ceq (K1,Ks)[K / N] = K1[K / N], Ks[K / N] if Ks =/= .KList .
+  eq .KList[K / N] = .KList .
+  eq (gamma C)[K / N] = gamma C[up(K) / (N + 1)] .
+  eq (C[Ks])[K / N] = (C[K / N])[Ks[K / N]] .
+  eq M[K / N] = if M == N then K else M fi .
+  eq T[K / N] = T .
 
-  rl (gamma hole . seq(C[hole],S))[K] => seq(C[K],S) .
-  rl seq(C[K],S) => (gamma hole . seq(C[hole],S))[K] .
----)
+--- De Bruijn up/down:
+  eq up(K) = move(K,1,1) .
+  eq down(K) = move(K,1,-1) .
+  eq move(L(Ks), N, D) = L(move(Ks, N, D)) .
+ ceq move((K,Ks), N, D) = move(K, N, D), move(Ks, N, D) if Ks =/= .KList .
+  eq move(.KList, N, D) = .KList .
 
-  op if : K K K -> K .
-  op leq : K K -> K .
-  ops a b s1 s2 : -> K .
+  eq move(gamma C, N, D) = gamma move(C, N + 1, D) .
+  eq move(C[Ks], N, D) = move(C, N, D)[move(Ks, N, D)] .
+  eq move(M, N, D) = if M >= N then M + D else M fi .
+  eq move(T, N, D) = T .
 
-  op gamma_ : K -> K .
+  eq (gamma (gamma C)[Ks1])[Ks2] = (gamma C)[Ks1,Ks2] .
+  eq C1[C2[Ks]] = (C1[[C2]])[Ks] .
+  eq C[Ks1][Ks2] = C[[Ks1]][Ks2] .
+endm
+
+mod IMP is
+  pr CXT .
+
+  ops if leq : -> Label .
+  ops a b s1 s2 : -> Token .
+
 
   vars K K1 K2 K3 : K .
-  op _[_] : K K -> K .  --- frozen(2) ?
 
---- rl if(K1,K2,K3) => (gamma if(0,K2,K3))[K1] .
- crl if(K1,K2,K3) => (gamma if(0,K2,K3))[K1] if not (K1 :: Nat) .
-  rl (gamma if(0,K2,K3))[K1] => if(K1,K2,K3) .
-
- crl leq(K1,K2) => (gamma leq(0,K2))[K1] if not (K1 :: Nat) .
-  rl (gamma leq(0,K2))[K1] => leq(K1,K2) .
-
- crl leq(K1,K2) => (gamma leq(K1,0))[K2] if not (K2 :: Nat) .
-  rl (gamma leq(K1,0))[K2] => leq(K1,K2) .
+ crl if(K1,K2,K3) => (gamma if(1,up(K2),up(K3)))[K1] if not (K1 :: Int) .
+ crl leq(K1,K2) => (gamma leq(1,up(K2)))[K1] if not (K1 :: Int) .
+ crl leq(K1,K2) => (gamma leq(up(K1),1))[K2] if not (K2 :: Int) .
 
 endm
 
+---search leq(a,b) =>* K .
 
 search if(leq(a,b),s1,s2) =>* K .
 
