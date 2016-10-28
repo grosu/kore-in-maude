@@ -88,12 +88,17 @@ mod IMP is
   op stmt : String -> Token .
 
   vars K  K1  K2  K3  : K .
-  vars K' K1' K2' K3' : [K] .
+  vars C' K' K1' K2' K3' : [K] .
 
+ rl top(K1,K2') => (gamma top({1},up(K2')))[K1] .
+ rl top((gamma C')[K1],K2') => (gamma top(C',up(K2')))[K1] .
+ rl top(K1',K2) => (gamma top(up(K1'),{1}))[K2] .
+ rl top(K1',(gamma C')[K2]) => (gamma top(up(K1'),C'))[K2] .
+ rl k(K) => (gamma k({1}))[K] .
+ rl k((gamma C')[K]) => (gamma k(C'))[K] .
+
+ 
 ***(
- crl top(K1,K2) => (gamma top({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
- crl top(K1,K2) => (gamma top(up(K1),{1}))[K2] if not (K2 :: BruijnVariable) .
- crl k(K) => (gamma k({1}))[K] if not (K :: BruijnVariable) .
  crl seq(K1,K2) => (gamma seq({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
  crl state(K) => (gamma state({1}))[K] if not (K :: BruijnVariable) .
  crl map(K1,K2) => (gamma map({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
@@ -101,15 +106,26 @@ mod IMP is
 ***)
  
  rl if(K1,K2',K3') => (gamma if({1},up(K2'),up(K3')))[K1] .
+--- redex propagation rules can be equations in most cases!
+--- some static analysis is needed
+ rl if((gamma C')[K1],K2',K3') => (gamma if(C',up(K2'),up(K3')))[K1] .
  rl leq(K1,K2') => (gamma leq({1},up(K2')))[K1] .
+ rl leq((gamma C')[K1],K2') => (gamma leq(C',up(K2')))[K1] .
  rl leq(K1',K2) => (gamma leq(up(K1'),{1}))[K2] .
+ rl leq(K1',(gamma C')[K2]) => (gamma leq(up(K1'),C'))[K2] .
 
 endm
 
+***(
 search if(leq(a,b),s1,s2) =>* K' .
+search if(leq(a,b),s1,s2) =>* (gamma(gamma(C'))[a])[b] .
+search if(leq(a,b),s1,s2) =>* (gamma(gamma(C'))[b])[a] .
+***)
+
+search top(k(a),b) =>* K' .
 
 q
-search if(leq(a,b),s1,s2) =>* C[a,b] .
+
 search if(leq(a,b),s1,s2) =>* C[b,a] .
 
 q
