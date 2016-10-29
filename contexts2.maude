@@ -41,7 +41,7 @@ mod CXT is
   eq (gamma C')[K' / N] = gamma (C'[up(K') / (N + 1)]) .
 ---  eq (gamma[M] C)[K / N] = gamma[M] C[move(K,1,M) / (N + M)] .
 --- is the rule below needed?
----  eq (C[Ks])[K / N] = (C[K / N])[Ks[K / N]] .
+  eq (C'[Ks'])[K' / N] = (C'[K' / N])[Ks'[K' / N]] .
   eq {M}[K' / N] = if M == N then K' else {M} fi .
   eq T[K' / N] = T .
 
@@ -55,7 +55,7 @@ mod CXT is
   eq move(gamma C', N, D) = gamma move(C', N + 1, D) .
 ---  eq move(gamma[M] C, N, D) = gamma[M] move(C, N + M, D) .
 ---is the rule below needed?
----  eq move(C[Ks], N, D) = move(C, N, D)[move(Ks, N, D)] .
+  eq move(C'[Ks'], N, D) = move(C', N, D)[move(Ks', N, D)] .
   eq move({M}, N, D) = if M >= N then {M + D} else {M} fi .
   eq move(T, N, D) = T .
 
@@ -71,13 +71,15 @@ mod CXT is
 ---)
 
 ---  eq (gamma[M1] (gamma[M2] C)[Ks1])[Ks2] = (gamma[M1 + M2] C)[move(Ks1,1,- M2),Ks2] .
-  eq (gamma C1')[(gamma C2')[K]] = (gamma C1'[C2' / 1])[K] .
+---  eq (gamma C1')[(gamma C2')[K]] = (gamma C1'[C2' / 1])[K] .
 endm
 
 mod IMP is
   pr CXT .
   pr STRING .
-  
+
+  subsort Int < Token .
+
   ops top k state : -> Label .
   ops if leq asgn seq : -> Label .
   ops bind map : -> Label .
@@ -87,32 +89,33 @@ mod IMP is
   op int : String -> Token .
   op stmt : String -> Token .
 
-  vars K  K1  K2  K3  : K .
+  vars K  K1  K2  K3 X V U  : K .
   vars C' K' K1' K2' K3' : [K] .
 
- rl top(K1,K2') => (gamma top({1},up(K2')))[K1] .
- rl top((gamma C')[K1],K2') => (gamma top(C',up(K2')))[K1] .
- rl top(K1',K2) => (gamma top(up(K1'),{1}))[K2] .
- rl top(K1',(gamma C')[K2]) => (gamma top(up(K1'),C'))[K2] .
- rl k(K) => (gamma k({1}))[K] .
- rl k((gamma C')[K]) => (gamma k(C'))[K] .
-
- 
-***(
- crl seq(K1,K2) => (gamma seq({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
- crl state(K) => (gamma state({1}))[K] if not (K :: BruijnVariable) .
- crl map(K1,K2) => (gamma map({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
---- crl map(K1,K2) => (gamma map(up(K1),{1}))[K2] if not (K2 :: BruijnVariable) .
-***)
- 
- rl if(K1,K2',K3') => (gamma if({1},up(K2'),up(K3')))[K1] .
 --- redex propagation rules can be equations in most cases!
 --- some static analysis is needed
- rl if((gamma C')[K1],K2',K3') => (gamma if(C',up(K2'),up(K3')))[K1] .
- rl leq(K1,K2') => (gamma leq({1},up(K2')))[K1] .
- rl leq((gamma C')[K1],K2') => (gamma leq(C',up(K2')))[K1] .
- rl leq(K1',K2) => (gamma leq(up(K1'),{1}))[K2] .
- rl leq(K1',(gamma C')[K2]) => (gamma leq(up(K1'),C'))[K2] .
+
+  rl top(K1,K2') => (gamma top({1},up(K2')))[K1] .
+  rl top((gamma C')[K1],K2') => (gamma top(C',up(K2')))[K1] .
+  rl top(K1',K2) => (gamma top(up(K1'),{1}))[K2] .
+  rl top(K1',(gamma C')[K2]) => (gamma top(up(K1'),C'))[K2] .
+  rl k(K) => (gamma k({1}))[K] .
+  rl k((gamma C')[K]) => (gamma k(C'))[K] .
+  rl seq(K1,K2') => (gamma seq({1},up(K2')))[K1] .
+  rl seq((gamma C')[K1],K2') => (gamma seq(C',up(K2')))[K1] .
+  rl state(K) => (gamma state({1}))[K] .
+  rl state((gamma C')[K]) => (gamma state(C'))[K] .
+  rl map(K1,K2') => (gamma map({1},up(K2')))[K1] .
+  rl map((gamma C')[K1],K2') => (gamma map(C',up(K2')))[K1] .
+  rl map(K1',K2) => (gamma map(up(K1'),{1}))[K2] .
+  rl map(K1',(gamma C')[K2]) => (gamma map(up(K1'),{1}))[K2] .
+
+  rl if(K1,K2',K3') => (gamma if({1},up(K2'),up(K3')))[K1] .
+  rl if((gamma C')[K1],K2',K3') => (gamma if(C',up(K2'),up(K3')))[K1] .
+  rl leq(K1,K2') => (gamma leq({1},up(K2')))[K1] .
+  rl leq((gamma C')[K1],K2') => (gamma leq(C',up(K2')))[K1] .
+  rl leq(K1',K2) => (gamma leq(up(K1'),{1}))[K2] .
+  rl leq(K1',(gamma C')[K2]) => (gamma leq(up(K1'),C'))[K2] .
 
 endm
 
@@ -122,7 +125,13 @@ search if(leq(a,b),s1,s2) =>* (gamma(gamma(C'))[a])[b] .
 search if(leq(a,b),s1,s2) =>* (gamma(gamma(C'))[b])[a] .
 ***)
 
-search top(k(a),b) =>* K' .
+---search top(k(a),b) =>* K' .
+search top(k(seq(a,b)),state(b)) =>* (gamma(gamma(C'))[a])[b] .
+
+search top(k(seq(asgn(id("b"),int("3")),asgn(id("b"),int("7")))),
+           state(map(bind(id("a"),int("0")),bind(id("b"),int("0")))))
+   =>* (gamma(gamma(C'))[asgn(X,V)])[bind(X,U)] .
+
 
 q
 
