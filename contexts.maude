@@ -13,7 +13,8 @@ mod CXT is
   sort BruijnVariable .
   subsort BruijnVariable < K .
   op {_} : Int -> BruijnVariable .
-  op gamma[_]_ : Int K -> K [gather(e &)] .
+  op gamma_ : K -> K [gather(&)] .
+---  op gamma[_]_ : Int K -> K [gather(e &)] .
   op _[_] : K KList -> K [prec 0] .
 
   op _[_/_] : K     K Int -> K     [prec 0] .
@@ -31,13 +32,14 @@ mod CXT is
 
   --- Context application uses the de Bruijn "substitution".
 --- Rule, because one may or may not apply the context.
-  rl (gamma[1] C)[K] => down(C[up(K) / 1]) .
+  rl (gamma C)[K] => down(C[up(K) / 1]) .
 
 --- De Bruijn substitution: uses de Bruijn lifting
   eq (L(Ks))[K / N] = L(Ks[K / N]) .
  ceq (K1,Ks)[K / N] = K1[K / N], Ks[K / N] if Ks =/= .KList .
   eq .KList[K / N] = .KList .
-  eq (gamma[M] C)[K / N] = gamma[M] C[move(K,1,M) / (N + M)] .
+  eq (gamma C)[K / N] = gamma C[up(K) / (N + 1)] .
+---  eq (gamma[M] C)[K / N] = gamma[M] C[move(K,1,M) / (N + M)] .
   eq (C[Ks])[K / N] = (C[K / N])[Ks[K / N]] .
   eq {M}[K / N] = if M == N then K else {M} fi .
   eq T[K / N] = T .
@@ -49,7 +51,8 @@ mod CXT is
  ceq move((K,Ks), N, D) = move(K, N, D), move(Ks, N, D) if Ks =/= .KList .
   eq move(.KList, N, D) = .KList .
 
-  eq move(gamma[M] C, N, D) = gamma[M] move(C, N + M, D) .
+  eq move(gamma C, N, D) = gamma move(C, N + 1, D) .
+---  eq move(gamma[M] C, N, D) = gamma[M] move(C, N + M, D) .
   eq move(C[Ks], N, D) = move(C, N, D)[move(Ks, N, D)] .
   eq move({M}, N, D) = if M >= N then {M + D} else {M} fi .
   eq move(T, N, D) = T .
@@ -65,8 +68,8 @@ mod CXT is
   eq C[Ks1][Ks2] = C[[Ks1]][Ks2] .
 ---)
 
-  eq (gamma[M1] (gamma[M2] C)[Ks1])[Ks2] = (gamma[M1 + M2] C)[move(Ks1,1,- M2),Ks2] .
-  eq (gamma[1] C1)[(gamma[1] C2)[K]] = (gamma[1] C1[C2 / 1])[K] .
+---  eq (gamma[M1] (gamma[M2] C)[Ks1])[Ks2] = (gamma[M1 + M2] C)[move(Ks1,1,- M2),Ks2] .
+  eq (gamma C1)[(gamma C2)[K]] = (gamma C1[C2 / 1])[K] .
 endm
 
 mod IMP is
@@ -85,24 +88,29 @@ subsort Int < Token .
 
   vars C C1 C2 K K1 K2 K3 X V U : K .
 
- crl top(K1,K2) => (gamma[1] top({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
- crl top(K1,K2) => (gamma[1] top(up(K1),{1}))[K2] if not (K2 :: BruijnVariable) .
- crl k(K) => (gamma[1] k({1}))[K] if not (K :: BruijnVariable) .
- crl seq(K1,K2) => (gamma[1] seq({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
- crl state(K) => (gamma[1] state({1}))[K] if not (K :: BruijnVariable) .
- crl map(K1,K2) => (gamma[1] map({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
---- crl map(K1,K2) => (gamma[1] map(up(K1),{1}))[K2] if not (K2 :: BruijnVariable) .
+ crl top(K1,K2) => (gamma top({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
+ crl top(K1,K2) => (gamma top(up(K1),{1}))[K2] if not (K2 :: BruijnVariable) .
+ crl k(K) => (gamma k({1}))[K] if not (K :: BruijnVariable) .
+ crl seq(K1,K2) => (gamma seq({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
+ crl state(K) => (gamma state({1}))[K] if not (K :: BruijnVariable) .
+ crl map(K1,K2) => (gamma map({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
+--- crl map(K1,K2) => (gamma map(up(K1),{1}))[K2] if not (K2 :: BruijnVariable) .
 
  
- crl if(K1,K2,K3) => (gamma[1] if({1},up(K2),up(K3)))[K1] if not (K1 :: BruijnVariable) .
- crl leq(K1,K2) => (gamma[1] leq({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
- crl leq(K1,K2) => (gamma[1] leq(up(K1),{1}))[K2] if not (K2 :: BruijnVariable) .
+ crl if(K1,K2,K3) => (gamma if({1},up(K2),up(K3)))[K1] if not (K1 :: BruijnVariable) .
+ crl leq(K1,K2) => (gamma leq({1},up(K2)))[K1] if not (K1 :: BruijnVariable) .
+ crl leq(K1,K2) => (gamma leq(up(K1),{1}))[K2] if not (K2 :: BruijnVariable) .
 
 endm
 
 
 ---(
 search if(leq(a,b),s1,s2) =>* K .
+q
+search if(leq(a,b),s1,s2) =>* C[a,b] .
+search if(leq(a,b),s1,s2) =>* C[b,a] .
+
+q
 
 search if(leq(a,b),s1,s2) =>* C[a,b] .
 search if(leq(a,b),s1,s2) =>* C[b,a] .
