@@ -120,32 +120,40 @@ mod IMP is
 --- Some static analysis is needed to make sure we do not need to stop
 --- the propagation under certain operations.
 
-  rl top(K1,K2') => gamma(top({1},up(K2')))[K1] .
-  eq top(gamma(C')[K1],K2') = gamma(top(C',up(K2')))[K1] .
-  rl top(K1',K2) => gamma(top(up(K1'),{1}))[K2] .
+op frozen : K -> K [frozen strat(0)] .
+var N : Int .
+eq frozen(K)[K' / N] = K .
+
+--- comment out because there is no rule with k in it
+---  rl top(K1,K2) => gamma(top({1},frozen(K2)))[K1] .
+  eq top(gamma(C')[K1],K2) = gamma(top(C',K2))[K1] .
+---  rl top({1},frozen(K2)) => gamma(top({2},{1}))[K2] .
   eq top(K1',gamma(C')[K2]) = gamma(top(up(K1'),C'))[K2] .
   rl k(K) => gamma(k({1}))[K] .
   eq k(gamma(C')[K]) = gamma(k(C'))[K] .
-  rl seq(K1,K2') => gamma(seq({1},up(K2')))[K1] .
-  eq seq(gamma(C')[K1],K2') = gamma(seq(C',up(K2')))[K1] .
-  rl state(K) => gamma(state({1}))[K] .
+  rl seq(K1,K2) => gamma(seq({1},frozen(K2)))[K1] .
+  eq seq(gamma(C')[K1],K2) = gamma(seq(C',frozen(K2)))[K1] .
+--- comment out if there are at least 2 elements in the state
+---  rl state(K) => gamma(state({1}))[K] .
   eq state(gamma(C')[K]) = gamma(state(C'))[K] .
-  rl map(K1,K2') => gamma(map({1},up(K2')))[K1] .
-  eq map(gamma(C')[K1],K2') = gamma(map(C',up(K2')))[K1] .
-  rl map(K1',K2) => gamma(map(up(K1'),{1}))[K2] .
-  eq map(K1',gamma(C')[K2]) = gamma(map(up(K1'),C'))[K2] .
-  rl asgn(K1',K2) => gamma(asgn(up(K1'),{1}))[K2] .
-  eq asgn(K1',gamma(C')[K2]) = gamma(asgn(up(K1'),C'))[K2] .
-  rl if(K1,K2',K3') => gamma(if({1},up(K2'),up(K3')))[K1] .
-  eq if(gamma(C')[K1],K2',K3') = gamma(if(C',up(K2'),up(K3')))[K1] .
-  rl leq(K1,K2') => gamma(leq({1},up(K2')))[K1] .
-  eq leq(gamma(C')[K1],K2') = gamma(leq(C',up(K2')))[K1] .
-  rl leq(K1',K2) => gamma(leq(up(K1'),{1}))[K2] .
-  eq leq(K1',gamma(C')[K2]) = gamma(leq(up(K1'),C'))[K2] .
-  rl plus(K1,K2') => gamma(plus({1},up(K2')))[K1] .
-  eq plus(gamma(C')[K1],K2') = gamma(plus(C',up(K2')))[K1] .
-  rl plus(K1',K2) => gamma(plus(up(K1'),{1}))[K2] .
-  eq plus(K1',gamma(C')[K2]) = gamma(plus(up(K1'),C'))[K2] .
+--- only one binding occurs in rules, so we can assume one redex
+  rl map(K1,K2) => gamma(map({1},K2))[K1] .
+  eq map(gamma(C')[K1],K2) = gamma(map(C',K2))[K1] .
+  rl map(K1,K2) => gamma(map(K1,{1}))[K2] .
+  eq map(K1,gamma(C')[K2]) = gamma(map(K1,C'))[K2] .
+  rl asgn(K1,K2) => gamma(asgn(frozen(K1),{1}))[K2] .
+  eq asgn(K1,gamma(C')[K2]) = gamma(asgn(frozen(K1),C'))[K2] .
+  rl if(K1,K2,K3) => gamma(if({1},frozen(K2),frozen(K3)))[K1] .
+  eq if(gamma(C')[K1],K2,K3) = gamma(if(C',frozen(K2),frozen(K3)))[K1] .
+
+  rl leq(K1,K2) => gamma(leq({1},K2))[K1] .
+  eq leq(gamma(C')[K1],K2) = gamma(leq(C',K2))[K1] .
+  rl leq(K1,K2) => gamma(leq(K1,{1}))[K2] .
+  eq leq(K1,gamma(C')[K2]) = gamma(leq(K1,C'))[K2] .
+  rl plus(K1,K2) => gamma(plus({1},K2))[K1] .
+  eq plus(gamma(C')[K1],K2) = gamma(plus(C',K2))[K1] .
+  rl plus(K1,K2) => gamma(plus(K1,{1}))[K2] .
+  eq plus(K1,gamma(C')[K2]) = gamma(plus(K1,C'))[K2] .
 
 --- Semantic rules
   rl < C'[ id(S1)][bind(id(S1),int(S2))] >1
@@ -177,7 +185,7 @@ endm
 
   rew [
     top(k(
-      seq(asgn(id("n"),int("10")),
+      seq(asgn(id("n"),int("100")),
       seq(asgn(id("s"),int("0")),
           while(leq(int("1"),id("n")),
                 seq(asgn(id("s"),plus(id("s"),id("n"))),
