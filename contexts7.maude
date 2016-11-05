@@ -185,7 +185,7 @@ endm
 
   rew [
     top(k(
-      seq(asgn(id("n"),int("100")),
+      seq(asgn(id("n"),int("10")),
       seq(asgn(id("s"),int("0")),
           while(leq(int("1"),id("n")),
                 seq(asgn(id("s"),plus(id("s"),id("n"))),

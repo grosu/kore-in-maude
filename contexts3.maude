@@ -146,7 +146,7 @@ mod IMP is
   rl map(K1,K2') => gamma(map({1},up(K2')))[K1] .
   eq map(gamma(C')[K1],K2') = gamma(map(C',up(K2')))[K1] .
   rl map(K1',K2) => gamma(map(up(K1'),{1}))[K2] .
-  eq map(K1',gamma(C')[K2]) = gamma(map(up(K1'),{1}))[K2] .
+  eq map(K1',gamma(C')[K2]) = gamma(map(up(K1'),C'))[K2] .
   rl asgn(K1',K2) => gamma(asgn(up(K1'),{1}))[K2] .
   eq asgn(K1',gamma(C')[K2]) = gamma(asgn(up(K1'),C'))[K2] .
   rl if(K1,K2',K3') => gamma(if({1},up(K2'),up(K3')))[K1] .

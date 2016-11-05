@@ -1,47 +1,72 @@
 mod K is
-  sorts K Token .
-  subsort Token < K .
+  sorts K KList Label Token .
+  subsorts Token < K < KList .
+  op _`(_`) : Label KList -> K [prec 0] .
+  op .KList : -> KList .
+  op _,_ : KList KList -> KList [assoc id: .KList] .
 endm
 
 mod CONTEXTS is
   including K .
   including INT .
-  including META-LEVEL .
 
-  op {_} : Int -> [K] .            --- de Bruijn indexes
-  op gamma : K -> [K] .            --- de Bruijn context
-  op _[_] : K K -> K [prec 0] .  --- context application
+  op {_} : Int -> [K] .  --- de Bruijn indexes
+  op gamma : K -> [K] .
+  op _[_] : K KList -> K [prec 0] .
 
-  op ERROR@K : -> [K] .
-  op ERROR@Int : -> [Int] .
-  op up : K -> K .
-  op move :   Term     Int Int ->   Term .
-  op move : NeTermList Int Int -> NeTermList .
+  op _[_/_] : K     K Int -> K     [prec 0] .
+  op _[_/_] : KList K Int -> KList [prec 0] .
+
+  ops up down : K -> K .
+  op move : K     Int Int -> K     .
+  op move : KList Int Int -> KList .
+
+  var K  K1 K2 : K .
+  var K' K1' C' C1' C2' : [K] .
+  var L : Label .
+  var Ks  Ks1  Ks2  : KList .
+  var Ks' Ks1' Ks2' : [KList] .
+  var N M D M1 M2 : Int .
+  var T : Token .
+
+--- Context application uses the de Bruijn "substitution".
+
+--- The following turned out to not be needed.
+--- Rule, because one may or may not apply the context.
+---  rl (gamma(C))[K] => down(C[up(K) / 1]) .
+
+--- De Bruijn substitution: uses de Bruijn lifting
+  eq (L(Ks'))[K' / N] = L(Ks'[K' / N]) .
+ ceq (K1',Ks')[K' / N] = K1'[K' / N], Ks'[K' / N] if K1' =/= .KList /\ Ks' =/= .KList .
+  eq .KList[K' / N] = .KList .
+--- up(K') below should not be needed in final version; good for debugging
+  eq gamma(C')[K' / N] = gamma(C'[up(K') / (N + 1)]) .
+--- is the rule below always needed?
+  eq (C'[Ks'])[K' / N] = (C'[K' / N])[Ks'[K' / N]] .
+  eq {M}[K' / N] = if M == N then K' else {M} fi .
+  eq T[K' / N] = T .
+
+--- De Bruijn up/down:
+  eq up(K') = move(K',1,1) .
+  eq down(K') = move(K',1,-1) .
+
+  eq move(K,N,D) = K .  --- hoping this equation will apply first; for performance only
+  eq move(L(Ks'), N, D) = L(move(Ks', N, D)) .
+ ceq move((K',Ks'), N, D) = move(K', N, D), move(Ks', N, D) if K' =/= .KList /\ Ks' =/= .KList .
+  eq move(.KList, N, D) = .KList .
+
+  eq move(gamma(C'), N, D) = gamma(move(C', N + 1, D)) .
+---is the rule below always needed?
+  eq move(C'[Ks'], N, D) = move(C', N, D)[move(Ks', N, D)] .
+  eq move({M}, N, D) = if M >= N then {M + D} else {M} fi .
+  eq move(T, N, D) = T .
+
+--- instanteneous application of context
+  op _{_} : [K] K -> K [prec 0] .
+  eq gamma(C'){K} = down(C'[K / 1]) .
   
-  var K' : [K] .
-  eq up(K') = downTerm(move(upTerm(K'),1,1),ERROR@K) .
+  eq gamma(gamma(C')[K1])[K2] = gamma(gamma(C'))[K2][K1] .
 
-  var Q : Qid .  vars T TK : Term .  var NeTl : NeTermList .  vars D N M : Int .
- ceq move('`{_`}[T], N, D) = '`{_`}[upTerm(if M >= N then M + D else M fi)]
-  if M := downTerm(T,ERROR@Int) .
-  eq move('gamma[T], N, D) = 'gamma[move(T, N + 1, D)] .
-  eq move(Q[NeTl], N, D) = Q[move(NeTl, N, D)] .
-  eq move((T,NeTl), N, D) = move(T, N, D), move(NeTl, N, D) .
-  eq move(T, N, D) = T [owise] .
-
-  op _{_} : K K -> K [prec 0] .
-  eq gamma(K'){K} = downTerm(upTerm(K')[upTerm(K) / 1], ERROR@K) .
-
-  op _[_/_] :   Term     Term Int ->   Term .
-  op _[_/_] : NeTermList Term Int -> NeTermList .
-  eq ('`{_`}[T])[TK / N] = if downTerm(T,ERROR@Int) == N then TK else '`{_`}[T] fi .
-  eq ('gamma[T])[TK / N] = 'gamma[T[TK / N + 1]] .
-  eq (Q[NeTl])[TK / N] = Q[NeTl[TK / N]] .
-  eq (T,NeTl)[TK / N] = T[TK / N], NeTl[TK / N] .
-  eq T[TK / N] = T [owise] .
-
-  vars K K1 K2 : K .
-  eq gamma(gamma(K')[K1])[K2] = gamma(gamma(K'))[K2][K1] .
 endm
 
 mod EXECUTION-INFRASTRUCTURE is
@@ -67,8 +92,8 @@ mod BUILTINS is
   op int : String -> Token .
   op bool : String -> Token .
   op  .Map : -> Token .
-  op leq@INT : K K -> K .
-  op plus@INT : K K -> K .
+  op leq@INT : -> Label .
+  op plus@INT : -> Label .
   vars S1 S2 : String .
   eq leq@INT(int(S1),int(S2))
    = if rat(S1,10) <= rat(S2,10) then bool("true") else bool("false") fi .
@@ -83,15 +108,17 @@ mod IMP is
   op top : K K -> K .
   op k : K -> K .
   op state : K -> K .
-  op while : K K -> K [frozen] .
-  op if : K K K -> K [frozen(2 3)] .
+  op while : K K -> K .
+  op if : K K K -> K .
   op leq : K K -> K .
-  op asgn : K K -> K [frozen(1)] .
-  op seq : K K -> K [frozen(2)] .
-  op skip : -> Token .
+  op asgn : K K -> K .
+  op seq : K K -> K .
   op plus : K K -> K .
-  op map : K K -> K .
+  op skip : -> Token .
   op bind : K K -> K .
+  op map : K K -> K .
+
+  ops a b c : -> Token .
 
   vars K  K1  K2  K3 X V U  : K .
   vars C' K' K1' K2' K3' : [K] .
@@ -104,14 +131,16 @@ mod IMP is
 --- the propagation under certain operations.
 
 --- comment out because there is no rule with k in it
----  rl top(K1,K2') => gamma(top({1},up(K2')))[K1] .
-  eq top(gamma(C')[K1],K2') = gamma(top(C',up(K2')))[K1] .
----  rl top(K1',K2) => gamma(top(up(K1'),{1}))[K2] .
+---  rl top(K1,K2) => gamma(top({1},frozen(K2)))[K1] .
+  eq top(gamma(C')[K1],K2) = gamma(top(C',K2))[K1] .
+---  rl top({1},frozen(K2)) => gamma(top({2},{1}))[K2] .
   eq top(K1',gamma(C')[K2]) = gamma(top(up(K1'),C'))[K2] .
   rl k(K) => gamma(k({1}))[K] .
   eq k(gamma(C')[K]) = gamma(k(C'))[K] .
-  rl seq(K1,K2) => gamma(seq({1},K2))[K1] .
-  eq seq(gamma(C')[K1],K2) = gamma(seq(C',K2))[K1] .
+  rl seq(K1,K2') => gamma(seq({1},K2'))[K1] .
+
+---  eq seq(K1',K2) = seq(K1',frozen(K2)) .
+  eq seq(gamma(C')[K1],K2') = gamma(seq(C',K2'))[K1] .
 --- comment out if there are at least 2 elements in the state
 ---  rl state(K) => gamma(state({1}))[K] .
   eq state(gamma(C')[K]) = gamma(state(C'))[K] .
@@ -120,10 +149,15 @@ mod IMP is
   eq map(gamma(C')[K1],K2) = gamma(map(C',K2))[K1] .
   rl map(K1,K2) => gamma(map(K1,{1}))[K2] .
   eq map(K1,gamma(C')[K2]) = gamma(map(K1,C'))[K2] .
-  rl asgn(K1,K2) => gamma(asgn(K1,{1}))[K2] .
-  eq asgn(K1,gamma(C')[K2]) = gamma(asgn(K1,C'))[K2] .
-  rl if(K1,K2,K3) => gamma(if({1},K2,K3))[K1] .
-  eq if(gamma(C')[K1],K2,K3) = gamma(if(C',K2,K3))[K1] .
+
+---  eq asgn(K1,K2') = asgn(frozen(K1),K2') .
+  rl asgn(K1',K2) => gamma(asgn(K1',{1}))[K2] .
+  eq asgn(K1',gamma(C')[K2]) = gamma(asgn(K1',C'))[K2] .
+
+---  eq if(K1',K2,K3') = if(K1',frozen(K2),K3') .
+---  eq if(K1',K2',K3) = if(K1',K2',frozen(K3)) .
+  rl if(K1,K2',K3') => gamma(if({1},K2',K3'))[K1] .
+  eq if(gamma(C')[K1],K2',K3') = gamma(if(C',K2',K3'))[K1] .
 
   rl leq(K1,K2) => gamma(leq({1},K2))[K1] .
   eq leq(gamma(C')[K1],K2) = gamma(leq(C',K2))[K1] .
@@ -134,6 +168,7 @@ mod IMP is
   rl plus(K1,K2) => gamma(plus(K1,{1}))[K2] .
   eq plus(K1,gamma(C')[K2]) = gamma(plus(K1,C'))[K2] .
 
+***(
 --- Semantic rules
   rl < C'[ id(S1)][bind(id(S1),int(S2))] >1
   => < C'{int(S2)}{bind(id(S1),int(S2))} >2 .
@@ -158,13 +193,16 @@ mod IMP is
 
   rl < C'[plus(int(S1),int(S2))] >1
   => < C'{plus@INT(int(S1),int(S2))} >2 .
+***)
 
 endm
 
+--- rewrites: 371070 in 276ms cpu (284ms real) (1344456 rewrites/second)
 
+***(
   rew [
     top(k(
-      seq(asgn(id("n"),int("100")),
+      seq(asgn(id("n"),int("10")),
       seq(asgn(id("s"),int("0")),
           while(leq(int("1"),id("n")),
                 seq(asgn(id("s"),plus(id("s"),id("n"))),
@@ -173,6 +211,9 @@ endm
       ))),
         state(map(bind(id("n"),int("0")),bind(id("s"),int("0")))))
       ] .
+***)
+
+   search top(k(a),state(map(b,c))) =>* K' .
 
 q
 
