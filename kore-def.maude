@@ -1,0 +1,163 @@
+--- Working
+--- =======
+
+set include BOOL off .
+set include NAT off .
+
+fmod CONSTRAINED-TERMS is
+    protecting STRING .
+
+    sorts Var KTerm Formula ConstrainedTerm .
+    subsort Var < KTerm < ConstrainedTerm .
+    sort REWTerm ConstrainedREWTerm .
+    subsort REWTerm < ConstrainedREWTerm .
+
+    op _==_ : ConstrainedTerm ConstrainedTerm -> Formula .
+    op _=>_ : KTerm KTerm -> REWTerm .
+    op _=>_ : ConstrainedTerm ConstrainedTerm -> ConstrainedREWTerm .
+
+    ops tt ff : -> Formula .
+    op  -_    : Formula -> Formula .
+    op  _/\_  : Formula Formula -> Formula .
+    op  _\/_  : Formula Formula -> Formula .
+    op  _->_  : Formula Formula -> Formula .
+    op  _<->_ : Formula Formula -> Formula .
+    op  E_._  : Var Formula -> Formula .
+    op  A_._  : Var Formula -> Formula .
+
+    op _|_ : ConstrainedTerm Formula -> ConstrainedTerm .
+    var CT : ConstrainedTerm . vars F1 F2 : Formula .
+    -------------------------------------------------
+    eq (CT | F1) | F2 = CT | (F1 /\ F2) .
+
+    op _|_ : REWTerm Formula -> ConstrainedREWTerm .
+    var CRT : ConstrainedREWTerm .
+    eq (CRT | F1) | F2 = CRT | (F1 /\ F2) .
+
+endfm
+
+fmod DECLARATIONS is
+    protecting CONSTRAINED-TERMS .
+    protecting NAT .
+
+    sorts KSort Regex .
+    sorts ProductionItem Production .
+    subsorts Regex String KSort < ProductionItem .
+    sorts SortDeclaration SubSortDeclaration SyntaxDeclaration RuleDeclaration .
+    sorts Declaration Declarations .
+    subsorts SortDeclaration SubSortDeclaration SyntaxDeclaration RuleDeclaration < Declaration < Declarations .
+    ------------------------------------------------------------------------------------------------------------
+
+    op r_ : String -> Regex [ctor prec 25] .
+    op #Sort : String -> KSort [ctor] .
+    op [_] : String -> Production .
+    op __ : ProductionItem Production -> Production [prec 40] .
+
+    op syntax_ : KSort -> SortDeclaration [ctor prec 50] .
+    op syntax_::=_ : KSort KSort -> SubSortDeclaration [ctor prec 50] .
+    op syntax_::=_ : KSort Production -> SyntaxDeclaration [ctor prec 50] .
+    op rule_ : ConstrainedREWTerm -> RuleDeclaration [ctor prec 50] .
+
+    op .Declarations : -> Declarations .
+    op __ : Declarations Declarations -> Declarations [assoc id: .Declarations prec 80 format(d ni d)] .
+
+endfm
+
+fmod KMOD is
+    protecting DECLARATIONS .
+
+    sorts KImport KImports KMod .
+    subsort KImport < KImports .
+
+    op imports_ : String -> KImport .
+    op .KImports : -> KImports .
+    op __ : KImports KImports -> KImports [assoc id: .KImports prec 80 format(d ni d)] .
+
+    op kmod__endkm  : String KImports -> KMod [prec 90 format(nn d n++i n n)] .
+    op kmod__endkm  : String Declarations -> KMod [prec 90 format(nn d n++i n n)] .
+    op kmod___endkm : String KImports Declarations -> KMod [ctor prec 90 format(nn d n++i nni n n)] .
+    ------------------------------------------------------------------------------------------------
+    var NAME : String . var DECS : Declarations . var IMPS : KImports .
+    eq kmod NAME DECS endkm = kmod NAME .KImports DECS endkm .
+    eq kmod NAME IMPS endkm = kmod NAME IMPS .Declarations endkm .
+
+endfm
+
+fmod KMOD-PROJECTIONS is
+    protecting KMOD .
+
+    sorts Extractor Extractable .
+    subsort Declaration KSort < Extractable .
+
+    var NAME : String . var IL : KImports .
+    var DECLS : Declarations . var DECL : Declaration .
+    var KMOD : KMod . vars SSTR SSTR' : String .
+    var KSORT : KSort . var PROD : Production .
+    var EXT : Extractor . var EXTABLE : Extractable .
+
+    op mtExt  : -> Extractable .
+    op _;;_  : Extractable Extractable -> Extractable [assoc comm id: mtExt prec 60] .
+    ----------------------------------------------------------------------------------
+    eq DECL  ;; DECL  = DECL .
+    eq KSORT ;; KSORT = KSORT .
+
+    op _[_] : Extractor Declaration -> Extractable .
+    op map : Extractor Declarations -> Extractable .
+    ------------------------------------------------
+    eq map( EXT , DECL DECLS    ) = EXT[DECL] ;; map( EXT , DECLS ) .
+    eq map( EXT , .Declarations ) = mtExt .
+
+    op overDeclarations : Extractor KMod -> Extractable .
+    -----------------------------------------------------
+    eq overDeclarations( EXT , kmod NAME IL DECLS endkm ) = map( EXT , DECLS ) .
+
+    op getSort : -> Extractor .
+    op getSorts : KMod -> Extractable .
+    -----------------------------------
+    eq getSorts( KMOD ) = overDeclarations( getSort , KMOD ) .
+    eq getSort[ syntax #Sort(SSTR)           ] = #Sort(SSTR) .
+    eq getSort[ syntax #Sort(SSTR) ::= KSORT ] = #Sort(SSTR) .
+    eq getSort[ syntax #Sort(SSTR) ::= PROD  ] = #Sort(SSTR) .
+
+    op getSubSort : -> Extractor .
+    op getSubSorts : KMod -> Extractable .
+    --------------------------------------
+    eq getSubSorts( KMOD ) = overDeclarations( getSubSort , KMOD ) .
+    eq getSubSort[ syntax #Sort(SSTR) ::= #Sort(SSTR') ] = syntax #Sort(SSTR) ::= #Sort(SSTR') .
+
+    eq EXT[ DECL ] = mtExt [owise] .
+endfm
+
+fmod TESTING-MODULES is
+    extending KMOD .
+    op MYMOD : -> KMod .
+
+    eq MYMOD =
+    kmod "BASIC-ARITH"
+
+        syntax #Sort("Nat")
+        syntax #Sort("Nat") ::= "0" ["zero"]
+        syntax #Sort("Nat") ::= "s" #Sort("Nat") ["succ"]
+        syntax #Sort("Nat") ::= #Sort("Nat") "+" #Sort("Nat") ["plus"]
+
+        syntax #Sort("Int")
+        syntax #Sort("Int") ::= #Sort("Nat")
+        syntax #Sort("Int") ::= "s" #Sort("Int") ["succ"]
+        syntax #Sort("Int") ::= "p" #Sort("Int") ["prec"]
+        syntax #Sort("Int") ::= #Sort("Int") "+" #Sort("Int") ["plus"]
+        syntax #Sort("Int") ::= #Sort("Int") "-" #Sort("Int") ["plus"]
+
+    endkm
+    .
+endfm
+
+fmod TESTING is
+    protecting TESTING-MODULES .
+    protecting KMOD-PROJECTIONS .
+endfm
+
+reduce MYMOD .
+reduce getSorts( MYMOD ) .
+reduce getSubSorts( MYMOD ) .
+
+q
