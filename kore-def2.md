@@ -2,9 +2,12 @@ KMaude
 
 ```maude
 fmod KMAUDE is
-    extending META-MODULE .
+    extending META-MODULE * (  op _+_  : ModuleExpression ModuleExpression -> ModuleExpression
+                            to op _++_ : ModuleExpression ModuleExpression -> ModuleExpression
+                            ) .
 
     sorts KTerminal KNonTerminal KProduction .
+    subsort String < KTerminal .
     subsort Sort < KNonTerminal .
     subsorts KTerminal KNonTerminal < KProduction .
 
@@ -12,14 +15,15 @@ fmod KMAUDE is
     subsort AttrSet < KAttributes .
     subsort KSyntax < KSentence < KSentences .
 
-    var H : Header . var IL : ImportList .
+    var ME : ModuleExpression . var H : Header . var IL : ImportList .
     vars S S' : Sort . var SS : SortSet . var SDS : SubsortDeclSet .
     var ODS : OpDeclSet . var MAS : MembAxSet .
     var ES : EquationSet . var RS : RuleSet .
-    var KA : KAttributes . var KP : KProduction . var KS : KSentences .
+    var KT : KTerminal . var KNT : KNonTerminal . vars KP KP' : KProduction .
+    var KA : KAttributes . var KS : KSentences .
 
-    op <Strings> : -> KTerminal .
-    op __ : KProduction KProduction -> KProduction [ctor ditto] .
+    op __ : KProduction KProduction -> KProduction [ctor assoc id: nil prec 25] .
+    -----------------------------------------------------------------------------
 
     op syntax_     : Sort             -> KSyntax [prec 30] .
     op syntax_::=_ : Sort KProduction -> KSyntax [prec 30] .
@@ -28,22 +32,46 @@ fmod KMAUDE is
 
     op .KSentences : -> KSentences .
     op __ : KSentences KSentences -> KSentences [ctor assoc comm id: .KSentences prec 80 format(d ni d)] .
+    ------------------------------------------------------------------------------------------------------
 
-    op kmod_is_sorts_.______endkm : Header ImportList SortSet SubsortDeclSet
-            OpDeclSet MembAxSet EquationSet RuleSet KSentences -> SModule
-            [ctor gather (& & & & & & & & &)
-             format (d d s n++i ni d d ni ni ni ni ni ni n--i d)] .
-    ---------------------------------------------------------------
+    op imports_ : ModuleExpression -> Import .
+    ------------------------------------------
+    eq imports ME = including ME . .
+
+    op kmod_is_sorts_.______endkm
+            : Header ImportList SortSet SubsortDeclSet OpDeclSet MembAxSet EquationSet RuleSet KSentences -> SModule
+            [ctor gather (& & & & & & & & &) format (d d s n++i ni d d ni ni ni ni ni ni n--i d)] .
+    op module___endmodule
+            : Header ImportList KSentences -> SModule
+            [gather (& & &) format (d n+i ni ni ni n-i)] .
+    ------------------------------------------------------
 
     op opQid : KProduction -> Qid .
+    -------------------------------
+    eq opQid( KT     ) = qid(KT) .
+    eq opQid( KNT    ) = '_ .
+    eq opQid( KP KP' ) = qid(string(opQid( KP )) + string(opQid( KP' ))) .
+
     op args  : KProduction -> TypeList .
+    ------------------------------------
+    eq args( KT     ) = nil .
+    eq args( KNT    ) = KNT .
+    eq args( KP KP' ) = args(KP) args(KP') .
+
+    eq module H IL KS endmodule = kmod H is IL sorts none . none none none none none KS endkm .
 
     eq kmod H is IL sorts SS . SDS ODS MAS ES RS .KSentences endkm
      = mod  H is IL sorts SS . SDS ODS MAS ES RS             endm  .
 
-    eq kmod H is IL sorts SS     . SDS ODS MAS ES RS syntax S KS endkm
-     = kmod H is IL sorts SS ; S . SDS ODS MAS ES RS          KS endkm .
+    --- not doing anything with the KAttributes
+    eq kmod H is IL sorts SS     . SDS ODS MAS ES RS syntax S [KA] KS endkm
+     = kmod H is IL sorts SS ; S . SDS ODS MAS ES RS               KS endkm .
 
+    --- not doing anything with the KAttributes
+    eq kmod H is IL sorts SS     . SDS                  ODS MAS ES RS syntax S ::= S' [KA] KS endkm
+     = kmod H is IL sorts SS ; S . SDS subsort S' < S . ODS MAS ES RS                      KS endkm .
+
+    --- relying on order of execution of equations
     eq kmod H is IL sorts SS     . SDS ODS                                     MAS ES RS syntax S ::= KP [KA] KS endkm
      = kmod H is IL sorts SS ; S . SDS ODS op opQid(KP) : args(KP) -> S [KA] . MAS ES RS                      KS endkm .
 endfm
@@ -51,26 +79,17 @@ endfm
 
 reduce
 
-kmod 'Test is nil
-    sorts none . none
-    none
-    none
-    none
-    none
+module 'Test
+    nil
     syntax 'Int
     syntax 'Int ::= 'Nat [none]
-    .KSentences
-endkm
+    syntax 'Int ::= 'Nat "hello" 'Nat
+endmodule
 
 .
 
 
 q
-
-
-
-
-
 
 
 ```
