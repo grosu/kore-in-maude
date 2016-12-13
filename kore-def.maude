@@ -15,6 +15,9 @@ fmod KMAUDE is
     subsort AttrSet < KAttributes .
     subsort KSyntax < KSentence < KSentences .
 
+    sort Modules .
+    subsort Module < Modules .
+
     var ME : ModuleExpression . var H : Header . var IL : ImportList .
     vars S S' : Sort . var SS : SortSet . var SDS : SubsortDeclSet .
     var ODS : OpDeclSet . var MAS : MembAxSet .
@@ -43,8 +46,10 @@ fmod KMAUDE is
             [ctor gather (& & & & & & & & &) format (d d s n++i ni d d ni ni ni ni ni ni n--i d)] .
     op module___endmodule
             : Header ImportList KSentences -> SModule
-            [gather (& & &) format (d n+i ni ni ni n-i)] .
-    ------------------------------------------------------
+            [gather (& & &) format (d d n++i ni n--i d)] .
+    op .Modules : -> Modules [ctor] .
+    op __ : Modules Modules -> Modules [ctor assoc comm id: .Modules prec 98 format(d nn d)] .
+    ------------------------------------------------------------------------------------------
 
     op opQid : KProduction -> Qid .
     -------------------------------
@@ -63,17 +68,16 @@ fmod KMAUDE is
     eq kmod H is IL sorts SS . SDS ODS MAS ES RS .KSentences endkm
      = mod  H is IL sorts SS . SDS ODS MAS ES RS             endm  .
 
-    --- not doing anything with the KAttributes
-    eq kmod H is IL sorts SS     . SDS ODS MAS ES RS syntax S [KA] KS endkm
-     = kmod H is IL sorts SS ; S . SDS ODS MAS ES RS               KS endkm .
+    eq kmod H is IL sorts SS     . SDS ODS MAS ES RS syntax S [none] KS endkm
+     = kmod H is IL sorts SS ; S . SDS ODS MAS ES RS                 KS endkm .
 
-    --- not doing anything with the KAttributes
-    eq kmod H is IL sorts SS     . SDS                  ODS MAS ES RS syntax S ::= S' [KA] KS endkm
-     = kmod H is IL sorts SS ; S . SDS subsort S' < S . ODS MAS ES RS                      KS endkm .
+    eq kmod H is IL sorts SS     . SDS                  ODS MAS ES RS syntax S ::= S' [none] KS endkm
+     = kmod H is IL sorts SS ; S . SDS subsort S' < S . ODS MAS ES RS                        KS endkm .
 
-    --- relying on order of execution of equations
     eq kmod H is IL sorts SS     . SDS ODS                                     MAS ES RS syntax S ::= KP [KA] KS endkm
-     = kmod H is IL sorts SS ; S . SDS ODS op opQid(KP) : args(KP) -> S [KA] . MAS ES RS                      KS endkm .
+     = kmod H is IL sorts SS ; S . SDS ODS op opQid(KP) : args(KP) -> S [KA] . MAS ES RS                      KS endkm
+       [owise] .
+
 endfm
 
 
@@ -86,9 +90,17 @@ module 'Test
     syntax 'Int ::= 'Nat "hello" 'Nat
 endmodule
 
+
+module 'Test2
+    imports 'Test
+    syntax 'Rat
+    syntax 'Rat ::= 'Int
+    syntax 'Rat ::= 'Rat "+" 'Rat
+endmodule
+
 .
 
 
-
+q
 
 
