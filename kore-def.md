@@ -3,9 +3,6 @@ Working
 =======
 
 ```maude
-set include BOOL off .
-set include NAT off .
-
 fmod CONSTRAINED-TERMS is
     protecting STRING .
 

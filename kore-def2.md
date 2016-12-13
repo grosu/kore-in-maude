@@ -1,6 +1,6 @@
---- KMaude
+KMaude
 
-
+```maude
 fmod KMAUDE is
     extending META-MODULE .
 
@@ -73,3 +73,4 @@ q
 
 
 
+```
