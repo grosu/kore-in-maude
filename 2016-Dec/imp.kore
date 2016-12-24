@@ -1,0 +1,83 @@
+import "domains.kore"
+
+//import "contexts.kore"
+
+module CONTEXTS
+  syntax K ::= #context(K,K)
+  syntax K ::= #context2(K,K,K)
+  syntax K ::= #context3(K,K,K,K)
+  axiom #context2(C,K1,K2) = #context(#context(C,K1),K2)
+  axiom #context3(C,K1,K2,K3) = #context(#context2(C,K1,K2),K3)
+
+  syntax K ::= #...(K)
+  syntax K ::= #...2(K,K)
+  syntax K ::= #...3(K,K)
+  axiom #...(K) = \exists C . #context(C,K)
+  axiom #...2(K1,K2) = \exists C . #context2(C,K1,K2)
+  axiom #...3(K1,K2,K3) = \exists C . #context3(C,K1,K2,K3)
+
+  // #gamma to be always used with existential quantifier.
+  // For example, the empty context: \exists HOLE . #gamma(HOLE)
+  syntax K ::= #gamma(K)
+  axiom #context(\exists HOLE . #gamma(HOLE), K) = K
+endmodule
+
+
+module IMP-SYNTAX
+  import DOMAINS-SYNTAX
+  import CONTEXTS
+  syntax AExp  ::= intAsAExp(Int)
+  syntax AExp  ::= idAsAExp(Id)
+  syntax AExp  ::= div(AExp,AExp)  [strict]
+  axiom #context(\exists HOLE . #gamma(div(#context(C,HOLE),E2)),E1)
+      = div(#context(C,E1),E2)     [strict(div,1)]
+  axiom #context(\exists HOLE . #gamma(div(E1,#context(C,HOLE))),E2)
+      = div(E1,#context(C,E2))     [strict(div,2)]
+  syntax AExp  ::= plus(AExp,AExp) [strict]
+  syntax BExp  ::= boolAsBExp(Bool)
+  syntax BExp  ::= leq(AExp,AExp)  [seqstrict]
+  syntax BExp  ::= not(BExp)       [strict]
+  syntax BExp  ::= and(BExp,BExp)  [strict(1)]
+  syntax Block ::= empty()
+  syntax Block ::= block(Stmt)
+  syntax Stmt  ::= blockAsStmt(Block)
+  syntax Stmt  ::= asgn(Id,AExp)            [strict(2)]
+  syntax Stmt  ::= if(BExp,Block,Block)     [strict(1)]
+  syntax Stmt  ::= while(BExp,Block)
+  syntax Stmt  ::= seq(Stmt,Stmt)  [strict(1)]
+  syntax Pgm   ::= pgm(Ids,Stmt)
+  syntax Ids   ::= List{Id,","}
+endmodule
+
+
+module IMP
+  imports IMP-SYNTAX
+  syntax KResult ::= Int | Bool
+
+  configuration <T color="yellow">
+                  <k color="green"> $PGM:Pgm </k>
+                  <state color="red"> .Map </state>
+                </T>
+
+// AExp
+  rule X:Id => I ... X |-> I
+  rule I1 / I2 => I1 /Int I2  requires I2 =/=Int 0
+  rule I1 + I2 => I1 +Int I2
+// BExp
+  rule I1 <= I2 => I1 <=Int I2
+  rule ! T => notBool T
+  rule true && B => B
+  rule false && _ => false
+// Block
+  rule {S} => S
+// Stmt
+  rule X = I:Int; => {} ... X |-> (_ => I)
+  rule {} S => S
+  rule if (true)  S else _ => S
+  rule if (false) _ else S => S
+  rule while (B) S => if (B) {S while (B) S} else {}  [structural]
+// Pgm
+  rule int (X,Xs => Xs);_ ... <state> Rho:Map (.Map => X|->0) </state>
+    requires notBool (X in keys(Rho))
+  rule int .Ids; S => S  [structural]
+endmodule
