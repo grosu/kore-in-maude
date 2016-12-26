@@ -1,12 +1,13 @@
 ***( Thoughts:
 - Not sure how to deal with the sort K:
-  Is it a supersort of everything, and then have injections into it,
-  from each user defined sort, or consider it a special sort where
-  each user-defined sort is a subosort of it in the order-sorted
-  algebra sense?
-- Should variables be sorted, X:Id, or we should use isSort membership
+  Is it a super syntactic category of everything, with actual injections into
+  it from each other user-defined syntactic category, or consider it a special
+  sort where each user-defined sort is a subosort in the order-sorted sense?
+- Should variables be sorted, i.e., X:Id, or we should use isSort membership
   patterns?  If we want to stay minimal, then the latter.  If we want
-  to keep the KORE definitions human readable, then the former.
+  to keep the KORE definitions human readable, then the former.  Also, note
+  that almost any language used to implement backends should be able to deal
+  with normal sorts / syntactic categories (as opposed to subsorts).
 ***)
 
 *** import "domains.kore"
