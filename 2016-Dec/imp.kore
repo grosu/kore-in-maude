@@ -8,10 +8,20 @@
   to keep the KORE definitions human readable, then the former.  Also, note
   that almost any language used to implement backends should be able to deal
   with normal sorts / syntactic categories (as opposed to subsorts).
+- Somewhat related to the above.  Should we enforce a strict sort discipline?
+  I think we should.  That is, we should always enforce an operation f that
+  takes arguments of sorts S1, S2, ... Sn to always take arguments of these
+  sorts.  Subsorts of these should be injected.
+- I believe injections should be declared strict.
 ***)
 
 *** import "domains.kore"
 *** inlined below
+
+module INT
+  syntax Int ::= plusInt(Int,Int)
+  syntax Int ::= divInt(Int,Int)
+endmodule
 
 module MAP
   syntax Map ::= bind(K,K)                       [Map]
@@ -21,6 +31,11 @@ module MAP
   axiom map(M,.Map()) = M                        [Map]
   axiom map(map(M1,M2),M3) = map(M1,map(M2,M3))  [Map]
   axiom map(M1,M2) = map(M2,M1)                  [Map]
+endmodule
+
+module DOMAINS
+  import INT
+  import MAP
 endmodule
 
 *** import "contexts.kore"
@@ -108,18 +123,19 @@ module IMP
                 </T>
 
 // AExp
-  rule #...2(X:Id => I, bind(X,I))
-  rule I1 / I2 => I1 /Int I2  requires I2 =/=Int 0
-  rule I1 + I2 => I1 +Int I2
+--- below, we rely on the fact that the injection Id < Exp is strict.
+  rule #...2(X:Id => intAsAExp(I), bind(X,I))
+  rule #...(div(intAsExp(I1),intAsExp(I2)) /\ \neg(I2 = 0) => divInt(I1,I2))
+  rule #...(plus(intAsExp(I1),intAsExp(I2)) => plusInt(I1,I2))
 // BExp
-  rule I1 <= I2 => I1 <=Int I2
-  rule ! T => notBool T
-  rule true && B => B
-  rule false && _ => false
+  rule #...(leq(intAsExp(I1),intAsExp(I2)) => leqInt(I1,I2))
+  rule #...(not(boolAsBExp(T)) => notBool(T))
+  rule #...(and(boolAsBExp(true),B) => B)
+  rule #...(and(boolAsBExp(false),_) => boolAsBExp(false))
 // Block
-  rule {S} => S
+  rule #...(block(S) => S)
 // Stmt
-  rule X = I:Int; => {} ... X |-> (_ => I)
+  rule #...2(asgn(X,intAsAExp(I)) => blockAsStmt(empty()), bind(X,_=>I))
   rule {} S => S
   rule if (true)  S else _ => S
   rule if (false) _ else S => S
