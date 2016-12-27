@@ -24,7 +24,7 @@ module INT
 endmodule
 
 module MAP
-  syntax Map ::= bind(K,K)                       [Map]
+  syntax Map ::= bind(K,K)                       [Map]   --- bind(Id,Int) ?
   syntax Map ::= .Map()                          [Map]
   syntax Map ::= map(Map,Map)                    [Map]
   axiom map(.Map(),M) = M                        [Map]
@@ -117,15 +117,20 @@ module IMP
   imports IMP-SYNTAX
   syntax KResult ::= Int | Bool
 
-  configuration <T color="yellow">
+  configuration <Top color="yellow">
                   <k color="green"> $PGM:Pgm </k>
                   <state color="red"> .Map </state>
-                </T>
+                </Top>
+
+  syntax TopCell ::= top(KCell,StateCell)
+  syntax TopCell ::= initTopCell(Map)
+
 
 // AExp
 --- below, we rely on the fact that the injection Id < Exp is strict.
   rule #...2(X:Id => intAsAExp(I), bind(X,I))
-  rule #...(div(intAsExp(I1),intAsExp(I2)) /\ \neg(I2 = 0) => divInt(I1,I2))
+  rule \neg(I2 = 0)  --- we can localize check down where I2 first appears
+    -> #...(div(intAsExp(I1),intAsExp(I2)) => divInt(I1,I2))
   rule #...(plus(intAsExp(I1),intAsExp(I2)) => plusInt(I1,I2))
 // BExp
   rule #...(leq(intAsExp(I1),intAsExp(I2)) => leqInt(I1,I2))
@@ -136,12 +141,12 @@ module IMP
   rule #...(block(S) => S)
 // Stmt
   rule #...2(asgn(X,intAsAExp(I)) => blockAsStmt(empty()), bind(X,_=>I))
-  rule {} S => S
-  rule if (true)  S else _ => S
-  rule if (false) _ else S => S
-  rule while (B) S => if (B) {S while (B) S} else {}  [structural]
+  rule #...(seq(blockAsStmt(empty()), S) => S)
+  rule #...(if(boolAsBExp(true),S,_) => S)   --- S is a block here and next
+  rule #...(if(boolAsBExp(false),_,S) => S)
+  rule #...(while(B,S) => if(B,block(seq(S,while(B,S))),empty()))
 // Pgm
-  rule int (X,Xs => Xs);_ ... <state> Rho:Map (.Map => X|->0) </state>
-    requires notBool (X in keys(Rho))
-  rule int .Ids; S => S  [structural]
+  rule in(X,keys(Rho)) = false   --- we can localize this check
+    -> #...(pgm(comma(idAsIds(X),Xs) => Xs,_), state(map(Rho, .Map()=>bind(X,0)))) 
+  rule #...(pgm(.Ids(),S) => S)  --- this changes the sort from Pgm to Stmt
 endmodule

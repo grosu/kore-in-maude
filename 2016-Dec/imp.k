@@ -25,10 +25,10 @@ module IMP
   imports IMP-SYNTAX
   syntax KResult ::= Int | Bool
 
-  configuration <T color="yellow">
+  configuration <Top color="yellow">
                   <k color="green"> $PGM:Pgm </k>
                   <state color="red"> .Map </state>
-                </T>
+                </Top>
 
 // AExp
   rule X:Id => I ... X |-> I
