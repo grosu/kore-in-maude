@@ -25,6 +25,21 @@ module INT
   syntax Int ::= divInt(Int,Int)
 endmodule
 
+module SET
+  syntax Set ::= .Set()                                   [Set]
+  syntax Set ::= kAsSet(K)                                [Set]
+  syntax Set ::= union(Set,Set)                           [Set]
+  syntax Bool ::= in(K,Set)                               [Set]
+  axiom union(.Set(), S) = S                              [Set]
+  axiom union(S1,S2) = union(S2,S1)                       [Set]
+  axiom union(union(S1,S2),S3) = union(S1,union(S2,S3))   [Set]
+  axiom union(S,S) = S                                    [Set]
+  axiom in(K,union(kAsSet(K),S)) = true                   [Set]
+  axiom \neg(K1 = K2) \implies
+        in(K1,union(kAsSet(K2),S)) = in(K1,S)             [Set]
+  axiom in(K1,.Set()) = false                             [Set]
+endmodule
+
 module MAP
   syntax Map ::= bind(K,K)                       [Map]   --- bind(Id,Int) ?
   syntax Map ::= .Map()                          [Map]
