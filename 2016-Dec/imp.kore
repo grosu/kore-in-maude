@@ -3,6 +3,8 @@
   Is it a super syntactic category of everything, with actual injections into
   it from each other user-defined syntactic category, or consider it a special
   sort where each user-defined sort is a subosort in the order-sorted sense?
+  Note 2 days later: I think we should go with the former; see last rule,
+  which rewrites a Pgm into a Stmt.
 - Should variables be sorted, i.e., X:Id, or we should use isSort membership
   patterns?  If we want to stay minimal, then the latter.  If we want
   to keep the KORE definitions human readable, then the former.  Also, note
@@ -90,7 +92,7 @@ module IMP-SYNTAX
   syntax BExp  ::= and(BExp,BExp)        [strict(1)]
   axiom #context(\exists HOLE . #gamma(and(#context(C,HOLE),B2)),B1)
       = and(#context(C,B1),B2)           [strict(and,1)]
-  syntax Block ::= empty()
+  syntax Block ::= emptyBlock()
   syntax Block ::= block(Stmt)
   syntax Stmt  ::= blockAsStmt(Block)
   syntax Stmt  ::= asgn(Id,AExp)         [strict(2)]
@@ -128,25 +130,27 @@ module IMP
 
 // AExp
 --- below, we rely on the fact that the injection Id < Exp is strict.
-  rule #...2(X:Id => intAsAExp(I), bind(X,I))
-  rule \neg(I2 = 0)  --- we can localize check down where I2 first appears
-    -> #...(div(intAsExp(I1),intAsExp(I2)) => divInt(I1,I2))
-  rule #...(plus(intAsExp(I1),intAsExp(I2)) => plusInt(I1,I2))
+  rule #...2(idAsAExp(X:Id) => intAsAExp(I), bind(X,I))
+  rule #...(div(intAsExp(I1),intAsExp(I2) /\ \neg(I2 = 0))
+            => intAsAExp(divInt(I1,I2)))
+  rule #...(plus(intAsExp(I1),intAsExp(I2)) => intAsAExp(plusInt(I1,I2)))
 // BExp
-  rule #...(leq(intAsExp(I1),intAsExp(I2)) => leqInt(I1,I2))
-  rule #...(not(boolAsBExp(T)) => notBool(T))
+  rule #...(leq(intAsExp(I1),intAsExp(I2)) => boolAsBExp(leqInt(I1,I2)))
+  rule #...(not(boolAsBExp(T)) => boolAsBExp(notBool(T)))
   rule #...(and(boolAsBExp(true),B) => B)
   rule #...(and(boolAsBExp(false),_) => boolAsBExp(false))
 // Block
-  rule #...(block(S) => S)
+  rule #...(blockAsStmt(block(S)) => S)
 // Stmt
-  rule #...2(asgn(X,intAsAExp(I)) => blockAsStmt(empty()), bind(X,_=>I))
-  rule #...(seq(blockAsStmt(empty()), S) => S)
-  rule #...(if(boolAsBExp(true),S,_) => S)   --- S is a block here and next
-  rule #...(if(boolAsBExp(false),_,S) => S)
-  rule #...(while(B,S) => if(B,block(seq(S,while(B,S))),empty()))
+  rule #...2(asgn(X,intAsAExp(I)) => blockAsStmt(emptyBlock()), bind(X,_=>I))
+  rule #...(seq(blockAsStmt(emptyBlock()), S) => S)
+  rule #...(if(boolAsBExp(true),S,_) => blockAsStmt(S))
+  rule #...(if(boolAsBExp(false),_,S) => blockAsStmt(S))
+  rule #...(while(B,S)
+            => if(B,block(seq(blockAsStmt(S),while(B,S))),emptyBlock()))
 // Pgm
-  rule in(X,keys(Rho)) = false   --- we can localize this check
-    -> #...(pgm(comma(idAsIds(X),Xs) => Xs,_), state(map(Rho, .Map()=>bind(X,0)))) 
-  rule #...(pgm(.Ids(),S) => S)  --- this changes the sort from Pgm to Stmt
+  rule #...(pgm(comma(idAsIds(X),Xs) => Xs,_),
+            state(map(Rho /\ in(X,keys(Rho)) = false,
+			      .Map() => bind(X,Int("0")))))
+  rule #...(pgmAsK(pgm(.Ids(),S)) => stmtAsK(S))
 endmodule
