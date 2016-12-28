@@ -130,7 +130,7 @@ module IMP
 
 // AExp
 --- below, we rely on the fact that the injection Id < Exp is strict.
-  rule #...2(idAsAExp(X:Id) => intAsAExp(I), bind(X,I))
+  rule #...2(idAsAExp(X) => intAsAExp(I), bind(X,I))
   rule #...(div(intAsExp(I1),intAsExp(I2) /\ \neg(I2 = 0))
             => intAsAExp(divInt(I1,I2)))
   rule #...(plus(intAsExp(I1),intAsExp(I2)) => intAsAExp(plusInt(I1,I2)))
