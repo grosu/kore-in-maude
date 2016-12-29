@@ -23,9 +23,21 @@
 *** import "domains.kore"
 *** inlined below
 
+module BOOL
+  syntax Bool ::= true
+  axiom true  = Bool("true")
+  syntax Bool ::= false
+  axiom false = Bool("false")
+  syntax Bool ::= notBool(Bool)
+endmodule
+
 module INT
+  import BOOL
   syntax Int ::= plusInt(Int,Int)
   syntax Int ::= divInt(Int,Int)
+  syntax Bool ::= leqInt(Int,Int)
+  syntax Int ::= 0
+  axiom 0 = Int("0")
 endmodule
 
 module SET
@@ -54,6 +66,7 @@ module MAP
 endmodule
 
 module DOMAINS
+  import BOOL
   import INT
   import SET
   import MAP
