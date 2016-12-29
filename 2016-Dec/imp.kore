@@ -5,6 +5,9 @@
   sort where each user-defined sort is a subosort in the order-sorted sense?
   Note 2 days later: I think we should go with the former; see last rule,
   which rewrites a Pgm into a Stmt.
+  Note 4 days later: Hm, we definitely need some way to allow polymorphic
+  symbols; for example, the #context can have any sort as its second argument.
+  One idea could be to consider K to be a polymorphic sort.
 - Should variables be sorted, i.e., X:Id, or we should use isSort membership
   patterns?  If we want to stay minimal, then the latter.  If we want
   to keep the KORE definitions human readable, then the former.  Also, note
@@ -52,6 +55,7 @@ endmodule
 
 module DOMAINS
   import INT
+  import SET
   import MAP
 endmodule
 
@@ -59,6 +63,9 @@ endmodule
 *** inlined below
 
 module CONTEXTS
+*** We want #context and #gamma to be polymorphic; which is why we may think
+*** of K as a polymorphic sort.  Or we can add new notation for polymorphic
+*** sorts or for polymorphic operations (like Maude does).
   syntax K ::= #context(K,K)
   syntax K ::= #context2(K,K,K)
   syntax K ::= #context3(K,K,K,K)
@@ -134,38 +141,54 @@ module IMP
   imports IMP-SYNTAX
   syntax KResult ::= Int | Bool
 
-  configuration <Top color="yellow">
-                  <k color="green"> $PGM:Pgm </k>
-                  <state color="red"> .Map </state>
-                </Top>
+  syntax TopCell ::= top(KCell,StateCell)  [cfg]
+  axiom #context(\exists HOLE . #gamma(top(#context(C,HOLE),Kc)),Sc)
+      = top(#context(C,Kc),Sc)             [cfg(top,1)]
+  axiom #context(\exists HOLE . #gamma(top(Kc,#context(C,HOLE))),Sc)
+      = top(Kc,#context(C,Sc))             [cfg(top,2)]
+  syntax KCell ::= k(K)                    [cfg]
+  axiom #context(\exists HOLE . #gamma(k(#context(C,HOLE)),K)
+      = k(#context(C,K))                   [cfg(k,1)]
+  syntax StateCell ::= state(Map)          [cfg]
+  axiom #context(\exists HOLE . #gamma(state(#context(C,HOLE)),M)
+      = state(#context(C,M))               [cfg(state,1)]
 
-  syntax TopCell ::= top(KCell,StateCell)
-  syntax TopCell ::= initTopCell(Map)
+  syntax TopCell ::= #krun(Pgm)
+  axiom #krun(P) = top(k(P),state(.Map()))
 
-
-// AExp
---- below, we rely on the fact that the injection Id < Exp is strict.
+*** AExp
+--- below, we do NOT rely on the injection Id < Exp to be strict.
   rule #...2(idAsAExp(X) => intAsAExp(I), bind(X,I))
-  rule #...(div(intAsExp(I1),intAsExp(I2) /\ \neg(I2 = 0))
+  rule \neg(I2 = Int("0")) \implies
+       #...(div(intAsExp(I1),intAsExp(I2))
             => intAsAExp(divInt(I1,I2)))
   rule #...(plus(intAsExp(I1),intAsExp(I2)) => intAsAExp(plusInt(I1,I2)))
-// BExp
+*** BExp
   rule #...(leq(intAsExp(I1),intAsExp(I2)) => boolAsBExp(leqInt(I1,I2)))
   rule #...(not(boolAsBExp(T)) => boolAsBExp(notBool(T)))
-  rule #...(and(boolAsBExp(true),B) => B)
-  rule #...(and(boolAsBExp(false),_) => boolAsBExp(false))
-// Block
+  rule #...(and(boolAsBExp(Bool("true")),B) => B)
+  rule #...(and(boolAsBExp(Bool("false")),_) => boolAsBExp(Bool("false")))
+*** Block
   rule #...(blockAsStmt(block(S)) => S)
-// Stmt
+*** Stmt
   rule #...2(asgn(X,intAsAExp(I)) => blockAsStmt(emptyBlock()), bind(X,_=>I))
   rule #...(seq(blockAsStmt(emptyBlock()), S) => S)
   rule #...(if(boolAsBExp(true),S,_) => blockAsStmt(S))
   rule #...(if(boolAsBExp(false),_,S) => blockAsStmt(S))
   rule #...(while(B,S)
             => if(B,block(seq(blockAsStmt(S),while(B,S))),emptyBlock()))
-// Pgm
+*** Pgm
   rule #...(pgm(comma(idAsIds(X),Xs) => Xs,_),
             state(map(Rho /\ in(X,keys(Rho)) = false,
 			      .Map() => bind(X,Int("0")))))
+*** Note that, without injections into K, the rule below changes the sort
+*** of the LHS term.  That is OK (albeit tricky), because the only way to
+*** complete the context below is with k(...) at the bottom, and the k
+*** symbol is polymorphic.  However, to be safe, I am using explicit
+*** injections.  We can actually allow and enforce the use of such injections
+*** into polymorphic sorts as sanity checks.  Technically, for each symbol
+*** sigma(S1,K,S2) polymorphic in K, we can assume an axiom
+*** sigma(A1,sortAsK(T),A2) = sigma(A1,T,A2)
   rule #...(pgmAsK(pgm(.Ids(),S)) => stmtAsK(S))
+
 endmodule
