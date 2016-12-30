@@ -1,108 +1,33 @@
-***(
-KORE design principles:
-- attributes have no semantic meaning (they may have in frontends)
--- they only give additional info to backends
-- no semantic loss when translating to KORE
--- same amount of "true concurrency", in particular
-
-Remember the core syntax of matching logic (ML):
-
-  Pattern ::= Variable
-            | sigma(Pattern,...,Pattern)  // sigma in Sigma
-            | \not Pattern
-            | Pattern \and Pattern
-            | \exists Variable . Pattern
-
-Additionally, we extend the above to dynamic matching logic (DML), which
-essentially means adding one more unary construct \next to the above:
-
-  Pattern ::= \next Pattern
-
-We are going to allow as much syntactic sugar as needed to the above.
-In particular, we allow "P1 => P2" for "P1 \implies \next P2".
-
-Syntax of matching logic is sorted in theory, but we prefer to work
-with unsorted in KORE, to give us more freedom.
-Sorts can be recovered using membership patterns.
-We may also allow sugar "Var:Sort" for "Var \and isSort(Var) = true"
-
-Recall that our objective is to define a DML theory, that is, a pair
-(Sigma, F), where Sigma is an ML signature and F is a set of DML patterns.
-Also as syntactic sugar, we allow modules and module imports.
-
-It is important to understand the distinction between symbols and
-values/elements.
-The symbols, which are part of the signature Sigma, are used to build
-patterns, that is, they are syntactic entities.
-The values are elements in the hypothetical model, that is, semantic
-entities.
-Nevertheless, when debugging/proving or in general when displaying
-results of various user-driven actions, we may need to see concrete
-values in patterns.
-For that reason, we allow each domain to display its values as strings,
-following whatever encoding convention they choose to.
-To distinguish values from some domains from values from other domains,
-we wrap the corresponding strings with the sort they belong to.
-For example, Int("123") can encode the integer value 123, and Bool("true")
-can encode the Boolean value true.
-The above implies, in particular, that there is a sharp distinction between
-constant symbols and values.
-It is easy to connect them, though, if one wants to do so for some
-(finite number) of them.
-For example, one may want to have symbols like 0 and true in one's signature,
-and link them to their desired values with axioms like:
-
-  axiom 0 = Int("0")
-  axiom true = Bool("true")
-
-***)
-
-
-mod MATCHING-LOGIC
-*** Strings are basic patterns, but they must only be used to encode model
-*** values, i.e., int("123"), bool("true"), etc.  In general, sort("string")
-  including STRING .
-*** Basic term-like syntax for structure:
-  sorts Symbol Variable Pattern PatternList .
-  subsorts String Symbol Variable < Pattern < PatternList .
-  op _`(_`) : Symbol PatternList -> Pattern . --- Maude has ` for escaping
-  op .PatternList : -> PatternList .
-  op _,_ : PatternList PatternList -> PatternList [assoc id: .PatternList] .
-  --- Note that we used `assoc` although this is a syntax for parsing;
-  --- if too slow, then use the `gather` attribute.
-*** Logical constructs:
-  op \true : -> Pattern .
-  op \false : -> Pattern .
-  op _\and_ : Pattern Pattern -> Pattern [assoc prec 55] .
-  op _\or_ : Pattern Pattern -> Pattern [assoc prec 59] .
-  op \not_ : Pattern -> Pattern [prec 53] .
-  op _\implies_ : Pattern Pattern -> Pattern [prec 61 gather(e E)] .
-  op \exists_._ : Variable Pattern -> Pattern .
-  op \forall_._ : Variable Pattern -> Pattern .
-  op \next_ : Pattern -> Pattern .
-  op _=>_ : Pattern Pattern -> Pattern .
-  op _=_ : Pattern Pattern -> Pattern .
-endm
-
+in matching-logic.maude
 
 mod KORE is
+  including MATCHING-LOGIC .
+
   sorts Module Definition .
-  subsort Module > Definition .
-  op __ : Definition Definition -> Definition [assoc]
+  subsort Module < Definition .
+  op __ : Definition Definition -> Definition
+    [prec 110 assoc] .
   --- Again, if `assoc` too expensive for parsing, use `gather`
 
-  sorts ModuleName Module ModuleList .
-  op module___endmodule_ : ModuleName SentenceList Attribute -> Module .
+  sort Attribute .
+  op [_] : Pattern -> Attribute .
+
+  sort ModuleName .
+  op module__endmodule_ : ModuleName SentenceList Attribute -> Module
+    [format(ni d ++n --ni d n) prec 100] .
 
   sorts Sentence SentenceList .
   subsort Sentence < SentenceList .
-  op .SentenceList : -> SentenceList .
-  op __ SentenceList SentenceList [assoc id: .SentenceList] .
+  op .SentenceList : -> SentenceList [format(i o)] .
+  op __ : SentenceList SentenceList -> SentenceList
+    [format(d n d) prec 90 assoc id: .SentenceList] .
 
-  op import_ : ModuleName -> Sentence .
+  op import_ : ModuleName -> Sentence
+    [format(i d d)] .
 
-  op syntax_::=_ : Sort Production -> Sentence .
-  op syntax_::=__ : Sort Production Attribute -> Sentence .
+  op syntax_::=__ : Sort Production Attribute -> Sentence
+    [format(i d d d d d) prec 80 strat(3 0)] .
+  --- strat(3 0) says that no desugaring happens in the first 2 arguments
 
   sorts Sort SortList .
   subsort Sort < SortList .
@@ -110,160 +35,42 @@ mod KORE is
   op _,_ : SortList SortList -> SortList [assoc id: .SortList] .
 
   sort Production .
-  subsort Symbol < Production .
   op _`(_`) : Symbol SortList -> Production .
 
-  op rule_  : Pattern -> Sentence .
-  op rule__ : Pattern Attribute -> Sentence .
+  op rule__ : Pattern Attribute -> Sentence
+    [format(i d d d) prec 80] .
 
-  op axiom_  : Pattern -> Sentence .
-  op axiom__ : Pattern Attribute -> Sentence .
+  op axiom__ : Pattern Attribute -> Sentence
+    [format(i d d d) prec 80] .
 endm
 
-q
-
-mod EXAMPLES is
+mod E-KORE is
+*** This defines some syntactic sugar on top of KORE.
+*** For now, it only adds options to arguments that are not always needed,
+*** but in the future it may add a lot more; ideally, all desirable syntactic
+*** sugar, except for the use of user-defined concrete syntax in rules, should
+*** go here, eventually.
+  including E-MATCHING-LOGIC .
   including KORE .
-  ops EMPTY IMP : -> Definition .
 
-  eq EMPTY =
-.RequireList
-module #ModuleName("EMPTY")
-  .ImportList
-  .SentenceList
-endmodule [.AttributeList]
-.ModuleList
-  .
+  op module__endmodule  : ModuleName SentenceList -> Module
+    [format(ni d ++n --ni n) prec 100] .
+  var M : ModuleName .  var Ss : SentenceList .
+  eq module M Ss endmodule = module M Ss endmodule [\true] .
 
-  eq IMP =
-require "domains.k"
-.RequireList
+  subsort Symbol < Production .
+  op syntax_::=_ : Sort Production -> Sentence
+    [format(i d d d d) prec 80 strat(0)] .
+  var S : Sort .  var P : Production .  var Sy : Symbol .  var Phi : Pattern .
+  eq syntax S ::= P = syntax S ::= P [\true] .
+  eq syntax S ::= Sy [Phi] = syntax S ::= Sy(.SortList) [Phi] .
 
+  op rule_  : Pattern -> Sentence
+    [format(i d d) prec 80] .
+  eq rule Phi = rule Phi [\true] .
 
-module #ModuleName("IMP-SYNTAX-COMMON")
-  import #ModuleName("DOMAINS")
-  .ImportList
-
-  syntax #Sort("AExp") ::= #Sort("Int") [.AttributeList]
-  syntax #Sort("AExp") ::= #Sort("Id") [.AttributeList]
-  syntax #Sort("AExp") ::= #Sort("AExp") "/" #Sort("AExp")
-    [#AttributeKey("left")(""), #AttributeKey("strict")(""), #AttributeKey("klabel")("_/_ : AExp * AExp ->  AExp"), .AttributeList]
-  syntax #Sort("AExp") ::= #Sort("AExp") "+" #Sort("AExp")
-    [#AttributeKey("left")(""), #AttributeKey("strict")(""), #AttributeKey("klabel")("_+_ : AExp * AExp ->  AExp"), .AttributeList]
-  syntax #Sort("AExp") ::= "(" #Sort("AExp") ")"
-    [#AttributeKey("bracket")(""), #AttributeKey("klabel")("(_) : AExp -> AExp"), .AttributeList]
-  syntax priority #Label("_/_ : AExp * AExp ->  AExp") > #Label("_+_ : AExp * AExp ->  AExp")
-    [.AttributeList]
-
-  syntax #Sort("BExp") ::= #Sort("Bool") [.AttributeList]
-  syntax #Sort("BExp") ::= #Sort("AExp") "<=" #Sort("AExp")
-    [#AttributeKey("seqstrict")(""), #AttributeKey("latex")("{#1}\leq{#2}"), #AttributeKey("klabel")("_<=_"), .AttributeList]
-
---- more to come here, but let's first converge on details
-
-  .SentenceList
-endmodule [.AttributeList]
-
-
-module #ModuleName("IMP-SYNTAX-PROGRAM-PARSING")
-  import #ModuleName("ID-PROGRAM-PARSING")
-  import #ModuleName("IMP-SYNTAX-COMMON")
-  .ImportList
-
---- more to come here, but let's first converge on details
-  .SentenceList
-endmodule [.AttributeList]
-
-
-module #ModuleName("IMP-SYNTAX")
-  import #ModuleName("IMP-SYNTAX-COMMON")
-  .ImportList
-
-  syntax #Sort("Ids") ::= ".Ids"
-    [#AttributeKey("klabel")(".Ids : -> Ids"), .AttributeList]
-  syntax #Sort("Ids") ::= #Sort("Id")
-    [.AttributeList]
-  syntax #Sort("Ids") ::= #Sort("Ids") "," #Sort("Ids")
-    [#AttributeKey("assoc")(""), #AttributeKey("unit")(".Ids : -> Ids"), .AttributeList]
-
---- more to come here, but let's first converge on details
-  .SentenceList
-endmodule [.AttributeList]
-
-
-module #ModuleName("IMP-SYNTAX-TRANSLATE")
-  import #ModuleName("IMP-SYNTAX-PROGRAM-PARSING")
-  import #ModuleName("IMP-SYNTAX")
-  .ImportList
---- more to come here, but let's first converge on details
-  .SentenceList
-endmodule [.AttributeList]
-
-
-module #ModuleName("IMP")
-  import #ModuleName("IMP-SYNTAX")
-  .ImportList
-
---- more to come here, but let's first converge on details
-
---- We need to discuss the rule below before we can continue.
----  rule <k> X = I:Int; => . ...</k> <state>... X |-> (_ => I) ...</state>
-  rule #Label("...")(
-         #Label("<k>_</k> : K -> KCell") (
-           (#Label("_=_; : Id * AExp -> Stmt")(
-              #Variable("X", #Sort("Id")), #Variable("I", #Sort("Int")))
-            => .K),
-           #Label("...")(.KList)
-         ),
-         #Label("<state>_</state> : Map -> StateCell")(
-           #Label("...")(.KList),
-           #Label("_|->_ : Id * Int -> Map")(
-             #Variable("X", #Sort("Id")),
-             #Variable("_", #Sort("Int")) => #Variable("I", #Sort("Int"))
-           ),
-           #Label("...")(.KList)
-         )
-       )
-    [.AttributeList]
-
---- more to come here, but let's first converge on details
-  .SentenceList
-endmodule [.AttributeList]
-
-.ModuleList
-
-  .
-
+  op axiom_  : Pattern -> Sentence
+    [format(i d d) prec 80] .
+  eq axiom Phi = axiom Phi [\true] .
 endm
 
----rewrite EMPTY .
-rewrite IMP .
-
----set print mixfix off .
-
-q
-
-Questions about this definition:
-- do we really need ~> as a K construct?  Can it be a label and thus the way K
-  deal with evaluation contexts just a particular methodology and not an
-  intrisic part of K ? Same question for =>.
-- rename .::K and .::KList to . ?  if we get rid of ~> as above, then we may
-  only need .::KList.
-- Should we allow empty productions instead of sort declarations?  A pro
-  argument is that we have fewer syntactic constructs.  A cons argument is
-  that a sort declaration may be regarded as a different entityr, with
-  different kinds of attributes.
-- Should we add constant AttributeKeys which have special semantics, like
-  "strict", as constants?
-- Brackets and disappearing injections are the same thing, arent's they?  A
-  production which only has one non-terminal and the production disappears
-  from the AST.
-- Should #Label contain more structured information than just a String?
-
-Comments about old kast.k and e-kore.k:
-- Stop having particular module names mean particular things in KORE!  You may do that in full K.
-- Why do you call ATTRIBUTES a module which only defines one attribute?
-- We agree on separating the attrbute listsand arguments  with commas, not spaces.
-- The current attributes are a mixture of K (you use the "token" attribute) and something
-  else.  I continue to believe that attributes can be just a KList.
-- #emptyKProduction was never defined anywhere, but used in KProduction

@@ -1,0 +1,235 @@
+in kore.maude
+
+mod IMP is
+  including E-KORE .
+
+  op imp.kore : -> Definition .
+
+  ops BOOL INT SET MAP DOMAINS CONTEXTS
+      IMP-SYNTAX IMP
+    : -> ModuleName .
+  ops Bool Int Set K KResult Map Id
+      AExp BExp Block Stmt Pgm Ids TopCell KCell StateCell
+    : -> Sort .
+  ops bool true false not@BOOL
+      int 0 1 2 plus@INT div@INT leq@INT
+      .Set kAsSet comma@SET in
+      .Map comma@MAP bind keys
+      list set map
+      #krun
+      #gamma #context #context2 #context3 #... #...2 #...3
+      strict seqstrict isKResult
+      intAsAExp idAsAExp boolAsBExp blockAsStmt pgmAsK stmtAsK idAsIds
+      intAsKResult boolAsKResult
+      div plus leq not and asgn seq emptyBlock block if while pgm .Ids comma
+      top k state cfg
+    : -> Symbol .
+  ops _ HOLE
+      S S1 S2 S3 K1 K2 K3 M M1 M2 M3 C
+      A A1 A2 B B1 B2 T X P Ids1 Ids2 Ids3 Kc Sc I I1 I2 Xs M
+    : -> Variable .
+  --- keep Variable disjoint from Sort
+  eq imp.kore =
+
+------------------------------------------
+
+*** import "domains.kore"
+*** inlined below
+
+module BOOL
+  syntax Bool ::= true
+  axiom true  = bool("true")
+  syntax Bool ::= false
+  axiom false = bool("false")
+  syntax Bool ::= not@BOOL(Bool)
+endmodule
+
+module INT
+  import BOOL
+  syntax Int  ::= plus@INT(Int,Int)
+  syntax Int  ::= div@INT(Int,Int)
+  syntax Bool ::= leq@INT(Int,Int)
+  syntax Int  ::= 0
+  axiom 0 = int("0")
+endmodule
+
+module SET
+  syntax Set ::= .Set                                                    [set]
+  syntax Set ::= kAsSet(K)                                               [set]
+  syntax Set ::= comma@SET(Set,Set)                                      [set]
+  syntax Bool ::= in(K,Set)                                              [set]
+  axiom comma@SET(.Set, S) = S                                           [set]
+  axiom comma@SET(S1,S2) = comma@SET(S2,S1)                              [set]
+  axiom comma@SET(comma@SET(S1,S2),S3) = comma@SET(S1,comma@SET(S2,S3))  [set]
+  axiom comma@SET(S,S) = S                                               [set]
+  axiom in(K1,comma@SET(kAsSet(K1),S)) = true                            [set]
+  axiom \not(K1 = K2) \implies
+        in(K1,comma@SET(kAsSet(K2),S)) = in(K1,S)                        [set]
+  axiom in(K1,.Set) = false                                              [set]
+endmodule
+
+module MAP
+  import SET
+  syntax Map ::= bind(K,K)                                               [map]
+  --- bind(Id,Int) ?
+  syntax Map ::= .Map                                                    [map]
+  syntax Map ::= comma@MAP(Map,Map)                                      [map]
+  syntax Set ::= keys(Map)                                               [map]
+  axiom comma@MAP(.Map,M) = M                                            [map]
+  axiom comma@MAP(M,.Map) = M                                            [map]
+  axiom comma@MAP(comma@MAP(M1,M2),M3) = comma@MAP(M1,comma@MAP(M2,M3))  [map]
+  axiom comma@MAP(M1,M2) = comma@MAP(M2,M1)                              [map]
+--- possibly add more axioms here, such as disjointness of bindings, keys, etc
+endmodule
+
+module DOMAINS
+  import BOOL
+  import INT
+  import SET
+  import MAP
+endmodule
+
+*** import "contexts.kore"
+*** inlined below
+
+module CONTEXTS
+*** We want #context and #gamma to be polymorphic; which is why we may think
+*** of K as a polymorphic sort.  Or we can add new notation for polymorphic
+*** sorts or for polymorphic operations (like Maude does).
+  syntax K ::= #context(K,K)
+  syntax K ::= #context2(K,K,K)
+  syntax K ::= #context3(K,K,K,K)
+  axiom #context2(C,K1,K2) = #context(#context(C,K1),K2)
+  axiom #context3(C,K1,K2,K3) = #context(#context2(C,K1,K2),K3)
+
+  syntax K ::= #...(K)
+  syntax K ::= #...2(K,K)
+  syntax K ::= #...3(K,K)
+  axiom #...(K1) = \exists C . #context(C,K1)
+  axiom #...2(K1,K2) = \exists C . #context2(C,K1,K2)
+  axiom #...3(K1,K2,K3) = \exists C . #context3(C,K1,K2,K3)
+
+  *** #gamma to be always used with existential quantifier.
+  *** For example, the empty context: \exists HOLE . #gamma(HOLE)
+  syntax K ::= #gamma(K)
+  axiom #context(\exists HOLE . #gamma(HOLE), K1) = K1
+endmodule
+
+module IMP-SYNTAX
+  import DOMAINS
+  import CONTEXTS
+  syntax AExp  ::= intAsAExp(Int)
+  syntax AExp  ::= idAsAExp(Id)
+  syntax AExp  ::= div(AExp,AExp)        [strict]
+  axiom #context(\exists HOLE . #gamma(div(#context(C,HOLE),A2)),A1)
+      = div(#context(C,A1),A2)           [strict(div,1)]
+  axiom #context(\exists HOLE . #gamma(div(A1,#context(C,HOLE))),A2)
+      = div(A1,#context(C,A2))           [strict(div,2)]
+  syntax AExp  ::= plus(AExp,AExp)       [strict]
+  axiom #context(\exists HOLE . #gamma(plus(#context(C,HOLE),A2)),A1)
+      = plus(#context(C,A1),A2)          [strict(plus,1)]
+  axiom #context(\exists HOLE . #gamma(plus(A1,#context(C,HOLE))),A2)
+      = plus(A1,#context(C,A2))          [strict(plus,2)]
+  syntax BExp  ::= boolAsBExp(Bool)
+  syntax BExp  ::= leq(AExp,AExp)        [seqstrict]
+  axiom #context(\exists HOLE . #gamma(leq(#context(C,HOLE),A2)),A1)
+      = leq(#context(C,A1),A2)           [seqstrict(leq,1)]
+  axiom isKResult(A1) = \true \implies
+        #context(\exists HOLE . #gamma(leq(A1,#context(C,HOLE))),A2)
+      = leq(A1,#context(C,A2))           [seqstrict(leq,2)]
+  syntax BExp  ::= not(BExp)             [strict]
+  axiom #context(\exists HOLE . #gamma(not(#context(C,HOLE))),B)
+      = not(#context(C,B))               [strict(not,1)]
+  syntax BExp  ::= and(BExp,BExp)        [strict(1)]
+  axiom #context(\exists HOLE . #gamma(and(#context(C,HOLE),B2)),B1)
+      = and(#context(C,B1),B2)           [strict(and,1)]
+  syntax Block ::= emptyBlock
+  syntax Block ::= block(Stmt)
+  syntax Stmt  ::= blockAsStmt(Block)
+  syntax Stmt  ::= asgn(Id,AExp)         [strict(2)]
+  axiom #context(\exists HOLE . #gamma(asgn(X,#context(C,HOLE))),A)
+      = asgn(X,#context(C,A))            [strict(asgn,2)]
+  syntax Stmt  ::= if(BExp,Block,Block)  [strict(1)]
+  axiom #context(\exists HOLE . #gamma(if(#context(C,HOLE),S1,S2)),B)
+      = if(#context(C,B),S1,S2)          [strict(if,1)]
+  syntax Stmt  ::= while(BExp,Block)
+  syntax Stmt  ::= seq(Stmt,Stmt)        [strict(1)]
+  axiom #context(\exists HOLE . #gamma(seq(#context(C,HOLE),S2)),S1)
+      = seq(#context(C,S1),S2)           [strict(seq,1)]
+  syntax Pgm   ::= pgm(Ids,Stmt)
+  syntax Ids   ::= idAsIds(Id)                                       [list]
+  syntax Ids   ::= .Ids                                              [list]
+  syntax Ids   ::= comma(Ids,Ids)                                    [list]
+  axiom comma(.Ids,Ids1) = Ids1                                      [list]
+  axiom comma(Ids1,.Ids) = Ids1                                      [list]
+  axiom comma(comma(Ids1,Ids2),Ids3) = comma(Ids1,comma(Ids2,Ids3))  [list]
+endmodule
+
+module IMP
+  import IMP-SYNTAX
+--- semantics of KResults need to be clarified
+  syntax KResult ::= intAsKResult(Int)
+  syntax KResult ::= boolAsKResult(Bool)
+
+  syntax TopCell ::= top(KCell,StateCell)  [cfg]
+  axiom #context(\exists HOLE . #gamma(top(#context(C,HOLE),Sc)),Kc)
+      = top(#context(C,Kc),Sc)             [cfg(top,1)]
+  axiom #context(\exists HOLE . #gamma(top(Kc,#context(C,HOLE))),Sc)
+      = top(Kc,#context(C,Sc))             [cfg(top,2)]
+  syntax KCell ::= k(K)                    [cfg]
+  axiom #context(\exists HOLE . #gamma(k(#context(C,HOLE))),K1)
+      = k(#context(C,K1))                   [cfg(k,1)]
+  syntax StateCell ::= state(Map)          [cfg]
+  axiom #context(\exists HOLE . #gamma(state(#context(C,HOLE))),M)
+      = state(#context(C,M))               [cfg(state,1)]
+
+  syntax TopCell ::= #krun(Pgm)
+  axiom #krun(P) = top(k(P),state(.Map))
+
+*** AExp
+--- below, we do NOT rely on the injection Id < Exp to be strict.
+  rule #...2(idAsAExp(X) => intAsAExp(I), bind(X,I))
+  rule \not(I2 = 0) \implies
+       #...(div(intAsAExp(I1),intAsAExp(I2))
+            => intAsAExp(div@INT(I1,I2)))
+  rule #...(plus(intAsAExp(I1),intAsAExp(I2)) => intAsAExp(plus@INT(I1,I2)))
+*** BExp
+  rule #...(leq(intAsAExp(I1),intAsAExp(I2)) => boolAsBExp(leq@INT(I1,I2)))
+  rule #...(not(boolAsBExp(T)) => boolAsBExp(not@BOOL(T)))
+  rule #...(and(boolAsBExp(true),B) => B)
+  rule #...(and(boolAsBExp(false),_) => boolAsBExp(false))
+*** Block
+  rule #...(blockAsStmt(block(S)) => S)
+*** Stmt
+  rule #...2(asgn(X,intAsAExp(I)) => blockAsStmt(emptyBlock), bind(X, _ => I))
+  rule #...(seq(blockAsStmt(emptyBlock), S) => S)
+  rule #...(if(boolAsBExp(true),S,_) => blockAsStmt(S))
+  rule #...(if(boolAsBExp(false),_,S) => blockAsStmt(S))
+  rule #...(while(B,S)
+            => if(B,block(seq(blockAsStmt(S),while(B,S))),emptyBlock))
+*** Pgm
+  rule #...(pgm(comma(idAsIds(X),Xs) => Xs,_),
+            state(comma@MAP(M \and in(X,keys(M)) = false,
+			    .Map => bind(X,0))))
+*** Note that, without injections into K, the rule below changes the sort
+*** of the LHS term.  That is OK (albeit tricky), because the only way to
+*** complete the context below is with k(...) at the bottom, and the k
+*** symbol is polymorphic.  However, to be safe, I am using explicit
+*** injections.  We can actually allow and enforce the use of such injections
+*** into polymorphic sorts as sanity checks.  Technically, for each symbol
+*** sigma(S1,K,S2) polymorphic in K, we can assume an axiom
+*** sigma(A1,sortAsK(T),A2) = sigma(A1,T,A2)
+  rule #...(pgmAsK(pgm(.Ids,S)) => stmtAsK(S))
+
+endmodule
+
+------------------------------------------
+
+  .
+
+endm
+
+rewrite imp.kore .
+
+q
+

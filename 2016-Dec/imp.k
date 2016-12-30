@@ -1,3 +1,6 @@
+*** This is the reference IMP definition from which we extracted the one
+*** in imp.kore and the one in imp.ekore
+
 module IMP-SYNTAX
   syntax AExp  ::= Int | Id
                  | AExp "/" AExp              [left, strict]
