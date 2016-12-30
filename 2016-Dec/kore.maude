@@ -47,123 +47,80 @@ For example, Int("123") can encode the integer value 123, and Bool("true")
 can encode the Boolean value true.
 The above implies, in particular, that there is a sharp distinction between
 constant symbols and values.
-It is easy to connect them, though, if one chooses to.
+It is easy to connect them, though, if one wants to do so for some
+(finite number) of them.
 For example, one may want to have symbols like 0 and true in one's signature,
-and link them to their desired values with axioms like
+and link them to their desired values with axioms like:
 
   axiom 0 = Int("0")
   axiom true = Bool("true")
 
 ***)
 
+
+mod MATCHING-LOGIC
+*** Strings are basic patterns, but they must only be used to encode model
+*** values, i.e., int("123"), bool("true"), etc.  In general, sort("string")
+  including STRING .
+*** Basic term-like syntax for structure:
+  sorts Symbol Variable Pattern PatternList .
+  subsorts String Symbol Variable < Pattern < PatternList .
+  op _`(_`) : Symbol PatternList -> Pattern . --- Maude has ` for escaping
+  op .PatternList : -> PatternList .
+  op _,_ : PatternList PatternList -> PatternList [assoc id: .PatternList] .
+  --- Note that we used `assoc` although this is a syntax for parsing;
+  --- if too slow, then use the `gather` attribute.
+*** Logical constructs:
+  op \true : -> Pattern .
+  op \false : -> Pattern .
+  op _\and_ : Pattern Pattern -> Pattern [assoc prec 55] .
+  op _\or_ : Pattern Pattern -> Pattern [assoc prec 59] .
+  op \not_ : Pattern -> Pattern [prec 53] .
+  op _\implies_ : Pattern Pattern -> Pattern [prec 61 gather(e E)] .
+  op \exists_._ : Variable Pattern -> Pattern .
+  op \forall_._ : Variable Pattern -> Pattern .
+  op \next_ : Pattern -> Pattern .
+  op _=>_ : Pattern Pattern -> Pattern .
+  op _=_ : Pattern Pattern -> Pattern .
+endm
+
+
 mod KORE is
-*** KAST
---- We are going to split the tokens in two categories.
---- 1) Tokens that correspond to symbols
-Since Maude does not allow us to define tokens, we will explicitly define
---- the various needed use wrapped strings as tokens.
---- For example, we cannot write `_+_` in Maude; so we'll write #Label("_+_").
---- In fact, this is good anyway for KORE, to keep things super-simple.
---- For maximum clarity, we will also include a separate sort for each type of token.
-  including STRING .  // the only external syntax
-
-  sorts Label Token Variable Application Item K KList . --- we call these "K Label", etc.
-  subsorts Token Variable Application < Item < K < KList .
-  op #Label : String -> Label .
-  op #Token : String Sort -> Token .
-  op #Variable : String Sort -> Variable .
-  op _`(_`) : Label KList -> Application . --- Maude requires ` to escape parentheses
-//  op .K : -> K .  --- .::K instead of .K gives a parsing error
-//  op _~>_ : K K -> K .
---- We are defining the KORE syntax for parsing here; in a KORE syntax for the
---- semantics of K we may want this operation to be associative, like below
----  op _~>_ : K K -> K [assoc id: .K] .
---- Note that we cannot define it as `_~>_ : Item K -> K` because we still want
---- to allow to match an Item in the middle of a K sequence.
-  op .KList : -> KList .
-  op _,_ : KList KList -> KList [gather(e E) prec 100] .  --- prec seems to be required ...
---- gather attribute makes _,_ parse as right associative
---- Same comment like for ~> above; in a syntax for semantics, we probably want:
----  op _,_ : KList KList -> KList [assoc id: .KList prec 100] .
-
-  sort Sort .
-  op #Sort : String -> Sort .
-
---- No support yet for external variables/constants
-
-*** K rewriting
---- Rewrite relation => can be nested and binds as weakly as possible.
---- With => we also need brackets: K1 ~> (K2 ~> K3 => K4 ~> K5) ~> K6
-  op _=>_ : K K -> K .  --- macro for "_ -> next _" with the matching logic notation (below)
----  op `(_`) : K -> K .  --- Maude uses parentheses for grouping already
-
-*** Matching logic
---- We can delay implementing these for now if they raise issues.
-  op _/\_ : K K -> K .
-  op not_ : K -> K .
-  op next_ : K -> K .
-  op exists__ : Variable K -> K .
---- No requires/ensures anymore; these are just syntactic sugar, which we do not
---- encourage or support anymore:
---- "C[K1 => K2] requires K3 ensures K4" is "C[K1 /\ K3 => K2 /\ K4]"
-
-*** Attributes
---- In the past, I proposed to just use KList for Attributes, but my proposal was rejected.
---- While I'd like you to reconsider, here is a syntax mimicking the current one.
-  sorts AttributeKey Attribute AttributeList Attributes .
-  op #AttributeKey : String -> AttributeKey .
-  op _`(_`) : AttributeKey String -> Attribute .
-  op .AttributeList : -> AttributeList .
-  op _,_ : Attribute AttributeList -> AttributeList [format(d d s d)] .
-  op [_] : AttributeList -> Attributes .
-
-*** Outer
-  sort Definition .
-  op __ : RequireList ModuleList -> Definition .
-
---- Maude does not allow and empty constant, so for now we assume explicit .Sort
---- constants for optional parameters.  An alternative can be to use subsorting,
---- for example, subsort ModuleList < Definition, but that can be awkward when
---- you have multiple empty constants of different sorts next to each other.
---- When defining sequences of elements, we prefer a left-recursive grammar for
---- now.
-
-  sorts Require RequireList .
-  op require_ : String -> Require [format(n d d)] .
-  op .RequireList : -> RequireList [format(n n)] .
-  op __ : Require RequireList -> RequireList .
+  sorts Module Definition .
+  subsort Module > Definition .
+  op __ : Definition Definition -> Definition [assoc]
+  --- Again, if `assoc` too expensive for parsing, use `gather`
 
   sorts ModuleName Module ModuleList .
-  op module___endmodule_ : ModuleName ImportList SentenceList Attributes -> Module [format(n d ++i d --in d n)] .
-  op .ModuleList : -> ModuleList [format(n d)] .
-  op __ : Module ModuleList -> ModuleList .
-
-  op #ModuleName : String -> ModuleName .
-
-  sorts Import ImportList .
-  op import_ : ModuleName -> Import [format(ni d d)] .
-  op .ImportList : -> ImportList [format(ni d)] .
-  op __ : Import ImportList -> ImportList .
+  op module___endmodule_ : ModuleName SentenceList Attribute -> Module .
 
   sorts Sentence SentenceList .
-  op .SentenceList : -> SentenceList [format(ni d)] .
-  op __ : Sentence SentenceList -> SentenceList .
+  subsort Sentence < SentenceList .
+  op .SentenceList : -> SentenceList .
+  op __ SentenceList SentenceList [assoc id: .SentenceList] .
 
-  op syntax__ : Sort Attributes -> Sentence .
-  op syntax_::=__ : Sort Production Attributes -> Sentence [format(ni d d d n++i-- d)] .
-  op syntax`priority_>__ : Label Label Attributes -> Sentence .
-  op syntax`left__ : Label Attributes -> Sentence .
-  op syntax`right__ : Label Attributes -> Sentence .
-  op syntax`non-assoc__ : Label Attributes -> Sentence .
+  op import_ : ModuleName -> Sentence .
 
-  sorts ProductionItem Production .
-  subsorts Sort String < ProductionItem < Production .
-  op r_ : String -> ProductionItem .
-  op __ : ProductionItem Production -> Production .
+  op syntax_::=_ : Sort Production -> Sentence .
+  op syntax_::=__ : Sort Production Attribute -> Sentence .
 
-  op rule__ : K Attributes -> Sentence [format(ni d n++i-- d)] .
+  sorts Sort SortList .
+  subsort Sort < SortList .
+  op .SortList : -> SortList .
+  op _,_ : SortList SortList -> SortList [assoc id: .SortList] .
 
+  sort Production .
+  subsort Symbol < Production .
+  op _`(_`) : Symbol SortList -> Production .
+
+  op rule_  : Pattern -> Sentence .
+  op rule__ : Pattern Attribute -> Sentence .
+
+  op axiom_  : Pattern -> Sentence .
+  op axiom__ : Pattern Attribute -> Sentence .
 endm
+
+q
 
 mod EXAMPLES is
   including KORE .
