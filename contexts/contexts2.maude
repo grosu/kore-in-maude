@@ -1,0 +1,235 @@
+mod K is
+  sorts K KList Label Token .
+  subsorts Token < K < KList .
+  op _`(_`) : Label KList -> K [prec 0] .
+  op .KList : -> KList .
+  op _,_ : KList KList -> KList [assoc id: .KList] .
+endm
+
+mod CONTEXTS is
+  including K .
+  including INT .
+
+  op {_} : Int -> [K] .  --- de Bruijn indexes
+  op gamma_ : K -> [K] [gather(&)] .
+  op _[_] : K KList -> K [prec 0] .
+
+  op _[_/_] : K     K Int -> K     [prec 0] .
+  op _[_/_] : KList K Int -> KList [prec 0] .
+
+  ops up down : K -> K .
+  op move : K     Int Int -> K     .
+  op move : KList Int Int -> KList .
+
+  var K  K1 : K .
+  var K' K1' C' C1' C2' : [K] .
+  var L : Label .
+  var Ks  Ks1  Ks2  : KList .
+  var Ks' Ks1' Ks2' : [KList] .
+  var N M D M1 M2 : Int .
+  var T : Token .
+
+  --- Context application uses the de Bruijn "substitution".
+--- Rule, because one may or may not apply the context.
+---  rl (gamma C)[K] => down(C[up(K) / 1]) .
+
+--- De Bruijn substitution: uses de Bruijn lifting
+  eq (L(Ks'))[K' / N] = L(Ks'[K' / N]) .
+ ceq (K1',Ks')[K' / N] = K1'[K' / N], Ks'[K' / N] if K1' =/= .KList /\ Ks' =/= .KList .
+  eq .KList[K' / N] = .KList .
+--- up(K') below should not be needed in final version; good for debugging
+  eq (gamma C')[K' / N] = gamma (C'[up(K') / (N + 1)]) .
+---  eq (gamma[M] C)[K / N] = gamma[M] C[move(K,1,M) / (N + M)] .
+--- is the rule below needed?
+  eq (C'[Ks'])[K' / N] = (C'[K' / N])[Ks'[K' / N]] .
+  eq {M}[K' / N] = if M == N then K' else {M} fi .
+  eq T[K' / N] = T .
+
+--- De Bruijn up/down:
+  eq up(K') = move(K',1,1) .
+  eq down(K') = move(K',1,-1) .
+  eq move(L(Ks'), N, D) = L(move(Ks', N, D)) .
+ ceq move((K',Ks'), N, D) = move(K', N, D), move(Ks', N, D) if K' =/= .KList /\ Ks' =/= .KList .
+  eq move(.KList, N, D) = .KList .
+
+  eq move(gamma C', N, D) = gamma move(C', N + 1, D) .
+---  eq move(gamma[M] C, N, D) = gamma[M] move(C, N + M, D) .
+---is the rule below needed?
+  eq move(C'[Ks'], N, D) = move(C', N, D)[move(Ks', N, D)] .
+  eq move({M}, N, D) = if M >= N then {M + D} else {M} fi .
+  eq move(T, N, D) = T .
+
+  op flatten : K -> K .
+  eq flatten(L(Ks')) = L(flatten(Ks')) .
+ ceq flatten(K1',Ks') = flatten(K1'), flatten(Ks') if K1' =/= .KList /\ Ks' =/= .KList .
+  eq flatten(.KList) = .KList .
+  eq flatten((gamma C')[K']) = flatten(down(C'[up(K') / 1])) .
+  eq flatten(T) = T .
+--- following should NOT be needed
+---  eq flatten({M}) = {M} .
+
+--- Symplification equations
+--- The following equation could be a rule
+---(
+  eq (gamma (gamma C)[Ks1])[Ks2] = (gamma C)[Ks1,Ks2] .
+
+  op _[[_]] : K KList -> K [prec 0] .
+  eq (gamma C)[[K]] = down(C[up(K) / 1]) .
+  eq C1[C2[Ks]] = (C1[[C2]])[Ks] .
+  eq C[Ks1][Ks2] = C[[Ks1]][Ks2] .
+---)
+
+---  eq (gamma[M1] (gamma[M2] C)[Ks1])[Ks2] = (gamma[M1 + M2] C)[move(Ks1,1,- M2),Ks2] .
+---  eq (gamma C1')[(gamma C2')[K]] = (gamma C1'[C2' / 1])[K] .
+endm
+
+mod EXECUTION-INFRASTRUCTURE is
+  including CONTEXTS .
+
+  sort TopLevel .
+  op <_>1 : K -> TopLevel .  --- keeps everything at top level
+  op <_>2 : K -> TopLevel . 
+  op [_] : K -> TopLevel [frozen] .
+  var K1 K2 : K .
+ crl [K1] => [K2] if < K1 >1 => < K2 >2 .
+endm
+
+mod IMP is
+  including EXECUTION-INFRASTRUCTURE .
+  including CONVERSION .  --- strings and string conversions
+
+  ops top k state : -> Label .
+  ops while if leq asgn seq plus : -> Label .
+  ops bind map : -> Label .
+  op  .Map : -> Token .
+---  ops a b s1 s2 : -> Token .
+  op skip : -> Token .
+  op id : String -> Token .
+  op int : String -> Token .
+  op bool : String -> Token .
+  op stmt : String -> Token .
+
+  vars K  K1  K2  K3 X V U  : K .
+  vars C' K' K1' K2' K3' : [K] .
+  vars S S1 S2 : String .
+
+--- redex propagation rules can be equations in most cases!
+--- some static analysis is needed
+
+  rl top(K1,K2') => (gamma top({1},up(K2')))[K1] .
+  eq top((gamma C')[K1],K2') = (gamma top(C',up(K2')))[K1] .
+  rl top(K1',K2) => (gamma top(up(K1'),{1}))[K2] .
+  eq top(K1',(gamma C')[K2]) = (gamma top(up(K1'),C'))[K2] .
+  rl k(K) => (gamma k({1}))[K] .
+  eq k((gamma C')[K]) = (gamma k(C'))[K] .
+  rl seq(K1,K2') => (gamma seq({1},up(K2')))[K1] .
+  eq seq((gamma C')[K1],K2') = (gamma seq(C',up(K2')))[K1] .
+  rl state(K) => (gamma state({1}))[K] .
+  eq state((gamma C')[K]) = (gamma state(C'))[K] .
+  rl map(K1,K2') => (gamma map({1},up(K2')))[K1] .
+  eq map((gamma C')[K1],K2') = (gamma map(C',up(K2')))[K1] .
+  rl map(K1',K2) => (gamma map(up(K1'),{1}))[K2] .
+  eq map(K1',(gamma C')[K2]) = (gamma map(up(K1'),{1}))[K2] .
+
+  rl asgn(K1',K2) => (gamma asgn(up(K1'),{1}))[K2] .
+  eq asgn(K1',(gamma C')[K2]) = (gamma asgn(up(K1'),C'))[K2] .
+
+  rl if(K1,K2',K3') => (gamma if({1},up(K2'),up(K3')))[K1] .
+  eq if((gamma C')[K1],K2',K3') = (gamma if(C',up(K2'),up(K3')))[K1] .
+  rl leq(K1,K2') => (gamma leq({1},up(K2')))[K1] .
+  eq leq((gamma C')[K1],K2') = (gamma leq(C',up(K2')))[K1] .
+  rl leq(K1',K2) => (gamma leq(up(K1'),{1}))[K2] .
+  eq leq(K1',(gamma C')[K2]) = (gamma leq(up(K1'),C'))[K2] .
+
+  rl plus(K1,K2') => (gamma plus({1},up(K2')))[K1] .
+  eq plus((gamma C')[K1],K2') = (gamma plus(C',up(K2')))[K1] .
+  rl plus(K1',K2) => (gamma plus(up(K1'),{1}))[K2] .
+  eq plus(K1',(gamma C')[K2]) = (gamma plus(up(K1'),C'))[K2] .
+
+---  rl asgn(K1',K2) => (gamma asgn(up(K1'),{1})
+
+--- Semantic rules
+  rl <         (gamma(gamma(C'))[ id(S1)])[bind(id(S1),int(S2))] >1
+  => < flatten((gamma(gamma(C'))[int(S2)])[bind(id(S1),int(S2))]) >2 .
+
+  rl <         (gamma(gamma(C'))[asgn(id(S1),int(S2))])[bind(id(S1),K)] >1
+  => < flatten((gamma(gamma(C'))[                skip])[bind(id(S1),int(S2))]) >2 .
+
+  rl <         (gamma C')[seq(skip,K)] >1
+  => < flatten((gamma C')[          K]) >2 .
+
+  rl <         (gamma C')[while(K1,K2)] >1
+  => < flatten((gamma C')[if(K1,seq(K2,while(K1,K2)),skip)]) >2 .
+
+  rl <         (gamma C')[if(bool("true"),K1,K2)] >1
+  => < flatten((gamma C')[K1]) >2 .
+
+  rl <         (gamma C')[if(bool("false"),K1,K2)] >1
+  => < flatten((gamma C')[K2]) >2 .
+
+  rl <        (gamma C')[leq(int(S1),int(S2))] >1
+  => < flatten((gamma C')[if rat(S1,10) <= rat(S2,10) then bool("true") else bool("false") fi]) >2 .
+
+  rl <        (gamma C')[plus(int(S1),int(S2))] >1
+  => < flatten((gamma C')[int(string(rat(S1,10) + rat(S2,10), 10))]) >2 .
+
+endm
+
+  rew [
+    top(k(
+      seq(asgn(id("n"),int("10")),
+      seq(asgn(id("s"),int("0")),
+          while(leq(int("1"),id("n")),
+                seq(asgn(id("s"),plus(id("s"),id("n"))),
+                    asgn(id("n"),plus(id("n"),int("-1")))
+                ))
+      ))),
+        state(map(bind(id("n"),int("0")),bind(id("s"),int("0")))))
+      ] .
+
+q
+
+***)
+
+  search <
+    top(k(seq(asgn(id("b"),int("3")),asgn(id("b"),int("7")))),
+        state(map(bind(id("a"),int("0")),bind(id("b"),int("0")))))
+      >1 =>* < K >2 .
+
+q
+
+***(
+search if(leq(a,b),s1,s2) =>* K' .
+search if(leq(a,b),s1,s2) =>* (gamma(gamma(C'))[a])[b] .
+search if(leq(a,b),s1,s2) =>* (gamma(gamma(C'))[b])[a] .
+***)
+
+---search top(k(a),b) =>* K' .
+search top(k(seq(a,b)),state(b)) =>* (gamma(gamma(C'))[a])[b] .
+
+search top(k(seq(asgn(id("b"),int("3")),asgn(id("b"),int("7")))),
+           state(map(bind(id("a"),int("0")),bind(id("b"),int("0")))))
+   =>* (gamma(gamma(C'))[asgn(X,V)])[bind(X,U)] .
+
+
+q
+
+search if(leq(a,b),s1,s2) =>* C[b,a] .
+
+q
+
+search if(leq(a,b),s1,s2) =>* C[a,b] .
+search if(leq(a,b),s1,s2) =>* C[b,a] .
+
+q
+
+--- search if(leq(id("a"),id("b")),stmt("s1"),stmt("s2")) =>* K .
+
+***(
+search top(k(seq(asgn(id("a"),int("3")),asgn(id("b"),int("7")))),
+           state(map(bind(id("a"),int("0")),map(bind(id("b"),int("0")),.Map))))
+   =>* K .
+---   =>* C[asgn(X,V), bind(X,U)] .
+***)
+
+q
