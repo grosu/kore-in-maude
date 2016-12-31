@@ -56,21 +56,21 @@ mod E-KORE is
   op module__endmodule  : ModuleName SentenceList -> Module
     [format(ni d ++n --ni n) prec 100] .
   var M : ModuleName .  var Ss : SentenceList .
-  eq module M Ss endmodule = module M Ss endmodule [.PatternList] .
+  eq module M Ss endmodule = module M Ss endmodule [\.] .
 
   subsort Symbol < Production .
   op syntax_::=_ : Sort Production -> Sentence
     [format(i d d d d) prec 80 strat(0)] .
   var S : Sort .  var P : Production .  var Sy : Symbol .  var Phi : Pattern .
-  eq syntax S ::= P = syntax S ::= P [.PatternList] .
+  eq syntax S ::= P = syntax S ::= P [\.] .
   eq syntax S ::= Sy [Phi] = syntax S ::= Sy(.SortList) [Phi] .
 
   op rule_  : Pattern -> Sentence
     [format(i d d) prec 80] .
-  eq rule Phi = rule Phi [.PatternList] .
+  eq rule Phi = rule Phi [\.] .
 
   op axiom_  : Pattern -> Sentence
     [format(i d d) prec 80] .
-  eq axiom Phi = axiom Phi [.PatternList] .
+  eq axiom Phi = axiom Phi [\.] .
 endm
 
