@@ -1,0 +1,20 @@
+in kore.maude
+
+mod EMPTY is
+  including KORE .
+
+  op EMPTY : -> ModuleName .
+  op empty.kore : -> Definition .
+
+  eq empty.kore =
+module EMPTY
+  .SentenceList
+endmodule [\true]
+  .
+
+endm
+
+rewrite empty.kore .
+
+q
+

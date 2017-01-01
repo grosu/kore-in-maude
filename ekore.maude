@@ -1,0 +1,72 @@
+in kore.maude
+
+mod E-MATCHING-LOGIC is
+*** Extending ML with sugar syntax allowing constant symbols to not take
+*** the empty list of arguments.
+*** In the future, we may also move the derived ML constructs above here,
+*** as well as other derived constructs that we may like or need.
+  including MATCHING-LOGIC .
+  subsort Symbol < Pattern .
+  var S : Symbol .  var P P1 P2 : Pattern .  var V : Variable .
+  eq S = S() .
+*** Sugared notation for ML pattern constructs
+  op _\and_ : Pattern Pattern -> Pattern [assoc prec 55] .
+  eq P1 \and P2 = \and(P1,P2) .
+  op _\or_ : Pattern Pattern -> Pattern [assoc prec 59] .
+  eq P1 \or P2 = \or(P1,P2) .
+---  op \not_ : Pattern -> Pattern [prec 53] .
+  op _\implies_ : Pattern Pattern -> Pattern [prec 61 gather(e E)] .
+  eq P1 \implies P2 = \implies(P1,P2) .
+  op \exists_._ : Variable Pattern -> Pattern .
+  eq \exists V . P = \exists(V,P) .
+  op \forall_._ : Variable Pattern -> Pattern .
+  eq \forall V . P = \forall(V,P) .
+---  op \next_ : Pattern -> Pattern .
+  op _=>_ : Pattern Pattern -> Pattern [prec 60] .
+  eq P1 => P2 = \rewrite(P1,P2) .
+  op _=_ : Pattern Pattern -> Pattern [prec 60] .
+  eq (P1 = P2) = \equal(P1,P2) .
+endm
+
+mod E-KORE is
+*** This defines some syntactic sugar on top of KORE.
+*** For now, it only adds options to arguments that are not always needed,
+*** but in the future it may add a lot more; ideally, all desirable syntactic
+*** sugar, except for the use of user-defined concrete syntax in rules, should
+*** go here, eventually.
+  including E-MATCHING-LOGIC .
+  including KORE .
+
+  op module__endmodule  : ModuleName SentenceList -> Module
+    [format(ni d ++n --ni n) prec 100] .
+  op module_endmodule : ModuleName -> Module
+    [format(ni d ni n) prec 100] .
+  var M : ModuleName .  var Sl : SentenceList .
+  eq module M Sl endmodule = module M Sl endmodule [] .
+  eq module M endmodule = module M endmodule [] .
+
+  op syntax_::=_`(_`) : Sort Symbol SortList -> Sentence
+    [format(i d d d d d d d) prec 80 strat(3 0)] .
+  op syntax_::=_`(`) : Sort Symbol -> Sentence
+    [format(i d d d d d d) prec 80 strat(0)] .
+  op syntax_::=_ : Sort Symbol -> Sentence
+    [format(i d d d d) prec 9 gather(& e) strat(0)] .
+  op syntax_::=__ : Sort Symbol Attributes -> Sentence
+    [format(i d d d d d) prec 9 gather(e e &) strat(3 0)] .
+  var S : Sort .  var Sy : Symbol .  var Ss : SortList .  var A : Attributes .
+  eq syntax S ::= Sy(Ss) = syntax S ::= Sy(Ss) [] .
+  eq syntax S ::= Sy() = syntax S ::= Sy() [] .
+  eq syntax S ::= Sy = syntax S ::= Sy() .
+  eq syntax S ::= Sy A = syntax S ::= Sy() A .
+
+  var Phi : Pattern .
+
+  op rule_  : Pattern -> Sentence
+    [format(i d d) prec 80] .
+  eq rule Phi = rule Phi [] .
+
+  op axiom_  : Pattern -> Sentence
+    [format(i d d) prec 80] .
+  eq axiom Phi = axiom Phi [] .
+endm
+
