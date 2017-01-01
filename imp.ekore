@@ -3,7 +3,7 @@ in ekore.maude
 mod IMP is
   including E-KORE .
 
-  op imp.kore : -> Definition .
+  op imp.ekore : -> Definition .
 
   ops BOOL INT SET MAP DOMAINS CONTEXTS
       IMP-SYNTAX IMP
@@ -29,7 +29,7 @@ mod IMP is
       A A1 A2 B B1 B2 T X P Ids1 Ids2 Ids3 Kc Sc I I1 I2 Xs M
     : -> Variable .
   --- keep Variable disjoint from Sort
-  eq imp.kore =
+  eq imp.ekore =
 
 ------------------------------------------
 
@@ -229,7 +229,7 @@ endmodule
 
 endm
 
-rewrite imp.kore .
+rewrite imp.ekore .
 
 q
 
