@@ -12,10 +12,11 @@ mod MATCHING-LOGIC is
   including KSTRING .
 *** Basic term-like syntax for structure:
   sorts Symbol Variable Pattern PatternList .
-  subsorts String Variable < Pattern < PatternList .
+  subsorts Variable < Pattern < PatternList .
   op _,_ : Pattern PatternList -> PatternList [prec 100 format(d d s d)] .
   op _`(_`) : Symbol PatternList -> Pattern   [prec 10 strat(2 0)] .
   op _`(`) : Symbol -> Pattern                [prec 10 strat(0)] .
+  op _`(_`) : Symbol String -> Pattern        [prec 10 strat(0)] .
   --- The strat attribute says that the symbol should never be
   --- evaluated; this is important because we want to later allow constant
   --- symbols in the E-KORE and then desugar them.
