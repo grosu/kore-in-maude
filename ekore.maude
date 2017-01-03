@@ -45,6 +45,12 @@ mod E-KORE is
   eq module M Sl endmodule = module M Sl endmodule [] .
   eq module M endmodule = module M endmodule [] .
 
+  op import_ : ModuleName -> Sentence
+    [format(i d d) prec 80] .
+  eq import M = import M [] .
+
+  op syntax_ : Sort -> Sentence
+    [format(i d d) prec 80] .
   op syntax_::=_`(_`) : Sort Symbol SortList -> Sentence
     [format(i d d d d d d d) prec 80 strat(3 0)] .
   op syntax_::=_`(`) : Sort Symbol -> Sentence
@@ -54,6 +60,7 @@ mod E-KORE is
   op syntax_::=__ : Sort Symbol Attributes -> Sentence
     [format(i d d d d d) prec 9 gather(e e &) strat(3 0)] .
   var S : Sort .  var Sy : Symbol .  var Ss : SortList .  var A : Attributes .
+  eq syntax S = syntax S [] .
   eq syntax S ::= Sy(Ss) = syntax S ::= Sy(Ss) [] .
   eq syntax S ::= Sy() = syntax S ::= Sy() [] .
   eq syntax S ::= Sy = syntax S ::= Sy() .
@@ -68,5 +75,11 @@ mod E-KORE is
   op axiom_  : Pattern -> Sentence
     [format(i d d) prec 80] .
   eq axiom Phi = axiom Phi [] .
+
+--- Variable inference needed
+  subsort VariableName < Variable .
+  op ??? : -> Sort .
+  var Vn : VariableName .
+  eq Vn = Vn : ??? .
 endm
 

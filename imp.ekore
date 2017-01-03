@@ -1,34 +1,12 @@
-in ekore.maude
+in ekore
+in imp-tokens
 
 mod IMP is
+  including IMP-TOKENS .
   including E-KORE .
 
   op imp.ekore : -> Definition .
 
-  ops BOOL INT SET MAP DOMAINS CONTEXTS
-      IMP-SYNTAX IMP
-    : -> ModuleName .
-  ops Bool Int Set K KResult Map Id
-      AExp BExp Block Stmt Pgm Ids TopCell KCell StateCell
-    : -> Sort .
-  ops bool true false not@BOOL
-      int 0 1 2 plus@INT div@INT leq@INT
-      .Set kAsSet comma@SET in
-      .Map comma@MAP bind keys
-      list set map
-      #krun
-      #gamma #context #context2 #context3 #... #...2 #...3
-      strict seqstrict isKResult
-      intAsAExp idAsAExp boolAsBExp blockAsStmt pgmAsK stmtAsK idAsIds
-      intAsKResult boolAsKResult
-      div plus leq not and asgn seq emptyBlock block if while pgm .Ids comma
-      top k state cfg
-    : -> Symbol .
-  ops _ HOLE
-      S S1 S2 S3 K1 K2 K3 M M1 M2 M3 C
-      A A1 A2 B B1 B2 T X P Ids1 Ids2 Ids3 Kc Sc I I1 I2 Xs M
-    : -> Variable .
-  --- keep Variable disjoint from Sort
   eq imp.ekore =
 
 ------------------------------------------
@@ -36,7 +14,12 @@ mod IMP is
 *** import "domains.kore"
 *** inlined below
 
+module ID
+  syntax Id
+endmodule
+
 module BOOL
+  syntax Bool
   syntax Bool ::= true
   axiom true  = bool("true")
   syntax Bool ::= false
@@ -46,6 +29,7 @@ endmodule
 
 module INT
   import BOOL
+  syntax Int
   syntax Int  ::= plus@INT(Int,Int)
   syntax Int  ::= div@INT(Int,Int)
   syntax Bool ::= leq@INT(Int,Int)
@@ -54,6 +38,7 @@ module INT
 endmodule
 
 module SET
+  syntax Set                                                             [set]
   syntax Set ::= .Set                                                    [set]
   syntax Set ::= kAsSet(K)                                               [set]
   syntax Set ::= comma@SET(Set,Set)                                      [set]
@@ -70,6 +55,7 @@ endmodule
 
 module MAP
   import SET
+  syntax Map                                                             [map]
   syntax Map ::= bind(K,K)                                               [map]
   --- bind(Id,Int) ?
   syntax Map ::= .Map                                                    [map]
@@ -83,10 +69,18 @@ module MAP
 endmodule
 
 module DOMAINS
+  import ID
   import BOOL
   import INT
   import SET
   import MAP
+endmodule
+
+*** Not 100% clear what module K should contain anymore
+module K
+  syntax KResult
+  syntax K
+  syntax K ::= kResultAsK(KResult)
 endmodule
 
 *** import "contexts.kore"
@@ -96,6 +90,7 @@ module CONTEXTS
 *** We want #context and #gamma to be polymorphic; which is why we may think
 *** of K as a polymorphic sort.  Or we can add new notation for polymorphic
 *** sorts or for polymorphic operations (like Maude does).
+  import K
   syntax K ::= #context(K,K)
   syntax K ::= #context2(K,K,K)
   syntax K ::= #context3(K,K,K,K)
@@ -118,6 +113,7 @@ endmodule
 module IMP-SYNTAX
   import DOMAINS
   import CONTEXTS
+  syntax AExp
   syntax AExp  ::= intAsAExp(Int)
   syntax AExp  ::= idAsAExp(Id)
   syntax AExp  ::= div(AExp,AExp)        [strict]
@@ -130,6 +126,7 @@ module IMP-SYNTAX
       = plus(#context(C,A1),A2)          [strict(plus,1)]
   axiom #context(\exists HOLE . #gamma(plus(A1,#context(C,HOLE))),A2)
       = plus(A1,#context(C,A2))          [strict(plus,2)]
+  syntax BExp
   syntax BExp  ::= boolAsBExp(Bool)
   syntax BExp  ::= leq(AExp,AExp)        [seqstrict]
   axiom #context(\exists HOLE . #gamma(leq(#context(C,HOLE),A2)),A1)
@@ -143,8 +140,10 @@ module IMP-SYNTAX
   syntax BExp  ::= and(BExp,BExp)        [strict(1)]
   axiom #context(\exists HOLE . #gamma(and(#context(C,HOLE),B2)),B1)
       = and(#context(C,B1),B2)           [strict(and,1)]
+  syntax Block
   syntax Block ::= emptyBlock
   syntax Block ::= block(Stmt)
+  syntax Stmt
   syntax Stmt  ::= blockAsStmt(Block)
   syntax Stmt  ::= asgn(Id,AExp)         [strict(2)]
   axiom #context(\exists HOLE . #gamma(asgn(X,#context(C,HOLE))),A)
@@ -156,7 +155,9 @@ module IMP-SYNTAX
   syntax Stmt  ::= seq(Stmt,Stmt)        [strict(1)]
   axiom #context(\exists HOLE . #gamma(seq(#context(C,HOLE),S2)),S1)
       = seq(#context(C,S1),S2)           [strict(seq,1)]
+  syntax Pgm
   syntax Pgm   ::= pgm(Ids,Stmt)
+  syntax Ids
   syntax Ids   ::= idAsIds(Id)                                       [list]
   syntax Ids   ::= .Ids                                              [list]
   syntax Ids   ::= comma(Ids,Ids)                                    [list]
@@ -171,14 +172,17 @@ module IMP
   syntax KResult ::= intAsKResult(Int)
   syntax KResult ::= boolAsKResult(Bool)
 
+  syntax TopCell                           [cfg]
   syntax TopCell ::= top(KCell,StateCell)  [cfg]
   axiom #context(\exists HOLE . #gamma(top(#context(C,HOLE),Sc)),Kc)
       = top(#context(C,Kc),Sc)             [cfg(top,1)]
   axiom #context(\exists HOLE . #gamma(top(Kc,#context(C,HOLE))),Sc)
       = top(Kc,#context(C,Sc))             [cfg(top,2)]
+  syntax KCell                             [cfg]
   syntax KCell ::= k(K)                    [cfg]
   axiom #context(\exists HOLE . #gamma(k(#context(C,HOLE))),K1)
-      = k(#context(C,K1))                   [cfg(k,1)]
+      = k(#context(C,K1))                  [cfg(k,1)]
+  syntax StateCell                         [cfg]
   syntax StateCell ::= state(Map)          [cfg]
   axiom #context(\exists HOLE . #gamma(state(#context(C,HOLE))),M)
       = state(#context(C,M))               [cfg(state,1)]
@@ -219,7 +223,7 @@ module IMP
 *** into polymorphic sorts as sanity checks.  Technically, for each symbol
 *** sigma(S1,K,S2) polymorphic in K, we can assume an axiom
 *** sigma(A1,sortAsK(T),A2) = sigma(A1,T,A2)
-  rule #...(pgmAsK(pgm(.Ids,S)) => stmtAsK(S))
+  rule #...(pgmAsK(pgm(.Ids,S : Stmt)) => stmtAsK(S))
 
 endmodule
 

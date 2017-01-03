@@ -13,9 +13,9 @@ mod MATCHING-LOGIC is
 *** Basic term-like syntax for structure:
   sorts Symbol Variable Pattern PatternList .
   subsorts String Variable < Pattern < PatternList .
-  op _,_ : Pattern PatternList -> PatternList [prec 100] .
-  op _`(_`) : Symbol PatternList -> Pattern [prec 10 strat(2 0)] .
-  op _`(`) : Symbol -> Pattern [prec 10 strat(0)] .
+  op _,_ : Pattern PatternList -> PatternList [prec 100 format(d d s d)] .
+  op _`(_`) : Symbol PatternList -> Pattern   [prec 10 strat(2 0)] .
+  op _`(`) : Symbol -> Pattern                [prec 10 strat(0)] .
   --- The strat attribute says that the symbol should never be
   --- evaluated; this is important because we want to later allow constant
   --- symbols in the E-KORE and then desugar them.
@@ -56,9 +56,11 @@ mod KORE is
   op __ : Sentence SentenceList -> SentenceList
     [format(d n d) prec 90] .
 
-  op import_ : ModuleName -> Sentence
-    [format(i d d)] .
+  op import__ : ModuleName Attributes -> Sentence
+    [format(i d d d) prec 80] .
 
+  op syntax__ : Sort Attributes -> Sentence
+    [format(i d d d) prec 80] .
   op syntax_::=_`(_`)_ : Sort Symbol SortList Attributes -> Sentence
     [format(i d d d d d d s d) prec 80 strat(3 4 0)] .
   op syntax_::=_`(`)_ : Sort Symbol Attributes -> Sentence
@@ -74,5 +76,9 @@ mod KORE is
 
   op axiom__ : Pattern Attributes -> Sentence
     [format(i d d d) prec 80] .
+
+--- Sort "Sort" above and the next may need to go to MATCHING-LOGIC
+  sort VariableName .
+  op _:_ : VariableName Sort -> Variable [strat(0)] .
 endm
 
