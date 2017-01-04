@@ -233,7 +233,7 @@ endmodule
 
 endm
 
-rewrite imp.ekore .
+rewrite translate(imp.ekore) .
 
 q
 

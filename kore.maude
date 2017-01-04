@@ -7,8 +7,6 @@ mod KSTRING is
 endm
 
 mod MATCHING-LOGIC is
-*** Strings are basic patterns, but they must only be used to encode model
-*** values, i.e., int("123"), bool("true"), etc.  In general, sort("string")
   including KSTRING .
 *** Basic term-like syntax for structure:
   sorts Symbol Variable Pattern PatternList .
@@ -37,9 +35,10 @@ endm
 mod KORE is
   including MATCHING-LOGIC .
 
-  sorts Module Definition .
-  subsort Module < Definition .
-  op __ : Module Definition -> Definition  [prec 110] .
+  sorts Module ModuleList Definition .
+  subsort Module < ModuleList .
+  op __ : Module ModuleList -> ModuleList  [prec 110] .
+  op __ : Attributes ModuleList -> Definition [prec 120 format(ni n d)] .
 
   sort Attributes .
   op [_] : PatternList -> Attributes .

@@ -37,6 +37,13 @@ mod E-KORE is
   including E-MATCHING-LOGIC .
   including KORE .
 
+  op translate_ : Definition -> Definition .
+
+  subsort ModuleList < Definition .
+  var Ml : ModuleList .
+  eq translate(Ml) = [] Ml .
+  eq translate([] Ml) = [] Ml .
+
   op module__endmodule  : ModuleName SentenceList -> Module
     [format(ni d ++n --ni n) prec 100] .
   op module_endmodule : ModuleName -> Module

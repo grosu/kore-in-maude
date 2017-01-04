@@ -8,6 +8,8 @@ endm
 
 parse
 
+[]
+
 module ID
   syntax Id []
 endmodule []
