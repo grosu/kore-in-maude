@@ -3,7 +3,6 @@ in imp-tokens
 
 mod IMP is
   including IMP-TOKENS .
-  op ??? : -> Sort .
 endm
 
 parse
@@ -39,14 +38,13 @@ module SET
   syntax Set ::= kAsSet(K) [set()]
   syntax Set ::= comma@SET(Set,Set) [set()]
   syntax Bool ::= in(K,Set) [set()]
-  axiom \equal(comma@SET(.Set(), S : ???), S : ???) [set()]
-  axiom \equal(comma@SET(S1 : ???, S2 : ???), comma@SET(S2 : ???, S1 : ???)) [set()]
-  axiom \equal(comma@SET(comma@SET(S1 : ???, S2 : ???), S3 : ???), comma@SET(S1 : ???, comma@SET(S2 : ???, S3 : ???))) [set()]
-  axiom \equal(comma@SET(S : ???, S : ???), S : ???) [set()]
-  axiom \equal(in(K1 : ???, comma@SET(kAsSet(K1 : ???), S : ???)), true()) [set()]
-  axiom \implies(\not(\equal(K1 : ???, K2 : ???)), \equal(in(K1 : ???, comma@SET(kAsSet(K2 : ???), S : ???)), in(K1 : ???, S :
-    ???))) [set()]
-  axiom \equal(in(K1 : ???, .Set()), false()) [set()]
+  axiom \equal(comma@SET(.Set(), S : InferredSort), S : InferredSort) [set()]
+  axiom \equal(comma@SET(S1 : InferredSort, S2 : InferredSort), comma@SET(S2 : InferredSort, S1 : InferredSort)) [set()]
+  axiom \equal(comma@SET(comma@SET(S1 : InferredSort, S2 : InferredSort), S3 : InferredSort), comma@SET(S1 : InferredSort, comma@SET(S2 : InferredSort, S3 : InferredSort))) [set()]
+  axiom \equal(comma@SET(S : InferredSort, S : InferredSort), S : InferredSort) [set()]
+  axiom \equal(in(K1 : InferredSort, comma@SET(kAsSet(K1 : InferredSort), S : InferredSort)), true()) [set()]
+  axiom \implies(\not(\equal(K1 : InferredSort, K2 : InferredSort)), \equal(in(K1 : InferredSort, comma@SET(kAsSet(K2 : InferredSort), S : InferredSort)), in(K1 : InferredSort, S : InferredSort))) [set()]
+  axiom \equal(in(K1 : InferredSort, .Set()), false()) [set()]
 endmodule []
  
 module MAP
@@ -56,10 +54,10 @@ module MAP
   syntax Map ::= .Map() [map()]
   syntax Map ::= comma@MAP(Map,Map) [map()]
   syntax Set ::= keys(Map) [map()]
-  axiom \equal(comma@MAP(.Map(), M : ???), M : ???) [map()]
-  axiom \equal(comma@MAP(M : ???, .Map()), M : ???) [map()]
-  axiom \equal(comma@MAP(comma@MAP(M1 : ???, M2 : ???), M3 : ???), comma@MAP(M1 : ???, comma@MAP(M2 : ???, M3 : ???))) [map()]
-  axiom \equal(comma@MAP(M1 : ???, M2 : ???), comma@MAP(M2 : ???, M1 : ???)) [map()]
+  axiom \equal(comma@MAP(.Map(), M : InferredSort), M : InferredSort) [map()]
+  axiom \equal(comma@MAP(M : InferredSort, .Map()), M : InferredSort) [map()]
+  axiom \equal(comma@MAP(comma@MAP(M1 : InferredSort, M2 : InferredSort), M3 : InferredSort), comma@MAP(M1 : InferredSort, comma@MAP(M2 : InferredSort, M3 : InferredSort))) [map()]
+  axiom \equal(comma@MAP(M1 : InferredSort, M2 : InferredSort), comma@MAP(M2 : InferredSort, M1 : InferredSort)) [map()]
 endmodule []
  
 module DOMAINS
@@ -81,16 +79,16 @@ module CONTEXTS
   syntax K ::= #context(K,K) []
   syntax K ::= #context2(K,K,K) []
   syntax K ::= #context3(K,K,K,K) []
-  axiom \equal(#context2(C : ???, K1 : ???, K2 : ???), #context(#context(C : ???, K1 : ???), K2 : ???)) []
-  axiom \equal(#context3(C : ???, K1 : ???, K2 : ???, K3 : ???), #context(#context2(C : ???, K1 : ???, K2 : ???), K3 : ???)) []
+  axiom \equal(#context2(C : InferredSort, K1 : InferredSort, K2 : InferredSort), #context(#context(C : InferredSort, K1 : InferredSort), K2 : InferredSort)) []
+  axiom \equal(#context3(C : InferredSort, K1 : InferredSort, K2 : InferredSort, K3 : InferredSort), #context(#context2(C : InferredSort, K1 : InferredSort, K2 : InferredSort), K3 : InferredSort)) []
   syntax K ::= #...(K) []
   syntax K ::= #...2(K,K) []
   syntax K ::= #...3(K,K) []
-  axiom \equal(#...(K1 : ???), \exists(C : ???, #context(C : ???, K1 : ???))) []
-  axiom \equal(#...2(K1 : ???, K2 : ???), \exists(C : ???, #context2(C : ???, K1 : ???, K2 : ???))) []
-  axiom \equal(#...3(K1 : ???, K2 : ???, K3 : ???), \exists(C : ???, #context3(C : ???, K1 : ???, K2 : ???, K3 : ???))) []
+  axiom \equal(#...(K1 : InferredSort), \exists(C : InferredSort, #context(C : InferredSort, K1 : InferredSort))) []
+  axiom \equal(#...2(K1 : InferredSort, K2 : InferredSort), \exists(C : InferredSort, #context2(C : InferredSort, K1 : InferredSort, K2 : InferredSort))) []
+  axiom \equal(#...3(K1 : InferredSort, K2 : InferredSort, K3 : InferredSort), \exists(C : InferredSort, #context3(C : InferredSort, K1 : InferredSort, K2 : InferredSort, K3 : InferredSort))) []
   syntax K ::= #gamma(K) []
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(HOLE : ???)), K1 : ???), K1 : ???) []
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(HOLE : InferredSort)), K1 : InferredSort), K1 : InferredSort) []
 endmodule []
  
 module IMP-SYNTAX
@@ -100,52 +98,41 @@ module IMP-SYNTAX
   syntax AExp ::= intAsAExp(Int) []
   syntax AExp ::= idAsAExp(Id) []
   syntax AExp ::= div(AExp,AExp) [strict()]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(div(#context(C : ???, HOLE : ???), A2 : ???))), A1 : ???), div(#context(C :
-    ???, A1 : ???), A2 : ???)) [strict(div(), 1())]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(div(A1 : ???, #context(C : ???, HOLE : ???)))), A2 : ???), div(A1 : ???,
-    #context(C : ???, A2 : ???))) [strict(div(), 2())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(div(#context(C : InferredSort, HOLE : InferredSort), A2 : InferredSort))), A1 : InferredSort), div(#context(C : InferredSort, A1 : InferredSort), A2 : InferredSort)) [strict(div(), 1())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(div(A1 : InferredSort, #context(C : InferredSort, HOLE : InferredSort)))), A2 : InferredSort), div(A1 : InferredSort, #context(C : InferredSort, A2 : InferredSort))) [strict(div(), 2())]
   syntax AExp ::= plus(AExp,AExp) [strict()]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(plus(#context(C : ???, HOLE : ???), A2 : ???))), A1 : ???), plus(#context(C
-    : ???, A1 : ???), A2 : ???)) [strict(plus(), 1())]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(plus(A1 : ???, #context(C : ???, HOLE : ???)))), A2 : ???), plus(A1 : ???,
-    #context(C : ???, A2 : ???))) [strict(plus(), 2())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(plus(#context(C : InferredSort, HOLE : InferredSort), A2 : InferredSort))), A1 : InferredSort), plus(#context(C : InferredSort, A1 : InferredSort), A2 : InferredSort)) [strict(plus(), 1())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(plus(A1 : InferredSort, #context(C : InferredSort, HOLE : InferredSort)))), A2 : InferredSort), plus(A1 : InferredSort, #context(C : InferredSort, A2 : InferredSort))) [strict(plus(), 2())]
   syntax BExp []
   syntax BExp ::= boolAsBExp(Bool) []
   syntax BExp ::= leq(AExp,AExp) [seqstrict()]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(leq(#context(C : ???, HOLE : ???), A2 : ???))), A1 : ???), leq(#context(C :
-    ???, A1 : ???), A2 : ???)) [seqstrict(leq(), 1())]
-  axiom \implies(\equal(isKResult(A1 : ???), \true), \equal(#context(\exists(HOLE : ???, #gamma(leq(A1 : ???, #context(C : ???,
-    HOLE : ???)))), A2 : ???), leq(A1 : ???, #context(C : ???, A2 : ???)))) [seqstrict(leq(), 2())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(leq(#context(C : InferredSort, HOLE : InferredSort), A2 : InferredSort))), A1 : InferredSort), leq(#context(C : InferredSort, A1 : InferredSort), A2 : InferredSort)) [seqstrict(leq(), 1())]
+  axiom \implies(\equal(isKResult(A1 : InferredSort), \top), \equal(#context(\exists(HOLE : InferredSort, #gamma(leq(A1 : InferredSort, #context(C : InferredSort, HOLE : InferredSort)))), A2 : InferredSort), leq(A1 : InferredSort, #context(C : InferredSort, A2 : InferredSort)))) [seqstrict(leq(), 2())]
   syntax BExp ::= not(BExp) [strict()]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(not(#context(C : ???, HOLE : ???)))), B : ???), not(#context(C : ???, B :
-    ???))) [strict(not(), 1())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(not(#context(C : InferredSort, HOLE : InferredSort)))), B : InferredSort), not(#context(C : InferredSort, B : InferredSort))) [strict(not(), 1())]
   syntax BExp ::= and(BExp,BExp) [strict(1())]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(and(#context(C : ???, HOLE : ???), B2 : ???))), B1 : ???), and(#context(C :
-    ???, B1 : ???), B2 : ???)) [strict(and(), 1())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(and(#context(C : InferredSort, HOLE : InferredSort), B2 : InferredSort))), B1 : InferredSort), and(#context(C : InferredSort, B1 : InferredSort), B2 : InferredSort)) [strict(and(), 1())]
   syntax Block []
   syntax Block ::= emptyBlock() []
   syntax Block ::= block(Stmt) []
   syntax Stmt []
   syntax Stmt ::= blockAsStmt(Block) []
   syntax Stmt ::= asgn(Id,AExp) [strict(2())]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(asgn(X : ???, #context(C : ???, HOLE : ???)))), A : ???), asgn(X : ???,
-    #context(C : ???, A : ???))) [strict(asgn(), 2())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(asgn(X : InferredSort, #context(C : InferredSort, HOLE : InferredSort)))), A : InferredSort), asgn(X : InferredSort, #context(C : InferredSort, A : InferredSort))) [strict(asgn(), 2())]
   syntax Stmt ::= if(BExp,Block,Block) [strict(1())]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(if(#context(C : ???, HOLE : ???), S1 : ???, S2 : ???))), B : ???), if(
-    #context(C : ???, B : ???), S1 : ???, S2 : ???)) [strict(if(), 1())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(if(#context(C : InferredSort, HOLE : InferredSort), S1 : InferredSort, S2 : InferredSort))), B : InferredSort), if(#context(C : InferredSort, B : InferredSort), S1 : InferredSort, S2 : InferredSort)) [strict(if(), 1())]
   syntax Stmt ::= while(BExp,Block) []
   syntax Stmt ::= seq(Stmt,Stmt) [strict(1())]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(seq(#context(C : ???, HOLE : ???), S2 : ???))), S1 : ???), seq(#context(C :
-    ???, S1 : ???), S2 : ???)) [strict(seq(), 1())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(seq(#context(C : InferredSort, HOLE : InferredSort), S2 : InferredSort))), S1 : InferredSort), seq(#context(C : InferredSort, S1 : InferredSort), S2 : InferredSort)) [strict(seq(), 1())]
   syntax Pgm []
   syntax Pgm ::= pgm(Ids,Stmt) []
   syntax Ids []
   syntax Ids ::= idAsIds(Id) [list()]
   syntax Ids ::= .Ids() [list()]
   syntax Ids ::= comma(Ids,Ids) [list()]
-  axiom \equal(comma(.Ids(), Ids1 : ???), Ids1 : ???) [list()]
-  axiom \equal(comma(Ids1 : ???, .Ids()), Ids1 : ???) [list()]
-  axiom \equal(comma(comma(Ids1 : ???, Ids2 : ???), Ids3 : ???), comma(Ids1 : ???, comma(Ids2 : ???, Ids3 : ???))) [list()]
+  axiom \equal(comma(.Ids(), Ids1 : InferredSort), Ids1 : InferredSort) [list()]
+  axiom \equal(comma(Ids1 : InferredSort, .Ids()), Ids1 : InferredSort) [list()]
+  axiom \equal(comma(comma(Ids1 : InferredSort, Ids2 : InferredSort), Ids3 : InferredSort), comma(Ids1 : InferredSort, comma(Ids2 : InferredSort, Ids3 : InferredSort))) [list()]
 endmodule []
  
 module IMP
@@ -154,39 +141,31 @@ module IMP
   syntax KResult ::= boolAsKResult(Bool) []
   syntax TopCell [cfg()]
   syntax TopCell ::= top(KCell,StateCell) [cfg()]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(top(#context(C : ???, HOLE : ???), Sc : ???))), Kc : ???), top(#context(C :
-    ???, Kc : ???), Sc : ???)) [cfg(top(), 1())]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(top(Kc : ???, #context(C : ???, HOLE : ???)))), Sc : ???), top(Kc : ???,
-    #context(C : ???, Sc : ???))) [cfg(top(), 2())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(top(#context(C : InferredSort, HOLE : InferredSort), Sc : InferredSort))), Kc : InferredSort), top(#context(C : InferredSort, Kc : InferredSort), Sc : InferredSort)) [cfg(top(), 1())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(top(Kc : InferredSort, #context(C : InferredSort, HOLE : InferredSort)))), Sc : InferredSort), top(Kc : InferredSort, #context(C : InferredSort, Sc : InferredSort))) [cfg(top(), 2())]
   syntax KCell [cfg()]
   syntax KCell ::= k(K) [cfg()]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(k(#context(C : ???, HOLE : ???)))), K1 : ???), k(#context(C : ???, K1 :
-    ???))) [cfg(k(), 1())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(k(#context(C : InferredSort, HOLE : InferredSort)))), K1 : InferredSort), k(#context(C : InferredSort, K1 : InferredSort))) [cfg(k(), 1())]
   syntax StateCell [cfg()]
   syntax StateCell ::= state(Map) [cfg()]
-  axiom \equal(#context(\exists(HOLE : ???, #gamma(state(#context(C : ???, HOLE : ???)))), M : ???), state(#context(C : ???, M
-    : ???))) [cfg(state(), 1())]
+  axiom \equal(#context(\exists(HOLE : InferredSort, #gamma(state(#context(C : InferredSort, HOLE : InferredSort)))), M : InferredSort), state(#context(C : InferredSort, M : InferredSort))) [cfg(state(), 1())]
   syntax TopCell ::= #krun(Pgm) []
-  axiom \equal(#krun(P : ???), top(k(P : ???), state(.Map()))) []
-  rule #...2(\rewrite(idAsAExp(X : ???), intAsAExp(I : ???)), bind(X : ???, I : ???)) []
-  rule \implies(\not(\equal(I2 : ???, 0())), #...(\rewrite(div(intAsAExp(I1 : ???), intAsAExp(I2 : ???)), intAsAExp(div@INT(I1
-    : ???, I2 : ???))))) []
-  rule #...(\rewrite(plus(intAsAExp(I1 : ???), intAsAExp(I2 : ???)), intAsAExp(plus@INT(I1 : ???, I2 : ???)))) []
-  rule #...(\rewrite(leq(intAsAExp(I1 : ???), intAsAExp(I2 : ???)), boolAsBExp(leq@INT(I1 : ???, I2 : ???)))) []
-  rule #...(\rewrite(not(boolAsBExp(T : ???)), boolAsBExp(not@BOOL(T : ???)))) []
-  rule #...(\rewrite(and(boolAsBExp(true()), B : ???), B : ???)) []
-  rule #...(\rewrite(and(boolAsBExp(false()), _ : ???), boolAsBExp(false()))) []
-  rule #...(\rewrite(blockAsStmt(block(S : ???)), S : ???)) []
-  rule #...2(\rewrite(asgn(X : ???, intAsAExp(I : ???)), blockAsStmt(emptyBlock())), bind(X : ???, \rewrite(_ : ???, I : ???)))
-    []
-  rule #...(\rewrite(seq(blockAsStmt(emptyBlock()), S : ???), S : ???)) []
-  rule #...(\rewrite(if(boolAsBExp(true()), S : ???, _ : ???), blockAsStmt(S : ???))) []
-  rule #...(\rewrite(if(boolAsBExp(false()), _ : ???, S : ???), blockAsStmt(S : ???))) []
-  rule #...(\rewrite(while(B : ???, S : ???), if(B : ???, block(seq(blockAsStmt(S : ???), while(B : ???, S : ???))),
-    emptyBlock()))) []
-  rule #...(pgm(\rewrite(comma(idAsIds(X : ???), Xs : ???), Xs : ???), _ : ???), state(comma@MAP(\equal(\and(M : ???, in(X :
-    ???, keys(M : ???))), false()), \rewrite(.Map(), bind(X : ???, 0()))))) []
-  rule #...(\rewrite(pgmAsK(pgm(.Ids(), S : Stmt)), stmtAsK(S : ???))) []
+  axiom \equal(#krun(P : InferredSort), top(k(P : InferredSort), state(.Map()))) []
+  rule #...2(\rewrite(idAsAExp(X : InferredSort), intAsAExp(I : InferredSort)), bind(X : InferredSort, I : InferredSort)) []
+  rule \implies(\not(\equal(I2 : InferredSort, 0())), #...(\rewrite(div(intAsAExp(I1 : InferredSort), intAsAExp(I2 : InferredSort)), intAsAExp(div@INT(I1 : InferredSort, I2 : InferredSort))))) []
+  rule #...(\rewrite(plus(intAsAExp(I1 : InferredSort), intAsAExp(I2 : InferredSort)), intAsAExp(plus@INT(I1 : InferredSort, I2 : InferredSort)))) []
+  rule #...(\rewrite(leq(intAsAExp(I1 : InferredSort), intAsAExp(I2 : InferredSort)), boolAsBExp(leq@INT(I1 : InferredSort, I2 : InferredSort)))) []
+  rule #...(\rewrite(not(boolAsBExp(T : InferredSort)), boolAsBExp(not@BOOL(T : InferredSort)))) []
+  rule #...(\rewrite(and(boolAsBExp(true()), B : InferredSort), B : InferredSort)) []
+  rule #...(\rewrite(and(boolAsBExp(false()), _ : InferredSort), boolAsBExp(false()))) []
+  rule #...(\rewrite(blockAsStmt(block(S : InferredSort)), S : InferredSort)) []
+  rule #...2(\rewrite(asgn(X : InferredSort, intAsAExp(I : InferredSort)), blockAsStmt(emptyBlock())), bind(X : InferredSort, \rewrite(_ : InferredSort, I : InferredSort))) []
+  rule #...(\rewrite(seq(blockAsStmt(emptyBlock()), S : InferredSort), S : InferredSort)) []
+  rule #...(\rewrite(if(boolAsBExp(true()), S : InferredSort, _ : InferredSort), blockAsStmt(S : InferredSort))) []
+  rule #...(\rewrite(if(boolAsBExp(false()), _ : InferredSort, S : InferredSort), blockAsStmt(S : InferredSort))) []
+  rule #...(\rewrite(while(B : InferredSort, S : InferredSort), if(B : InferredSort, block(seq(blockAsStmt(S : InferredSort), while(B : InferredSort, S : InferredSort))), emptyBlock()))) []
+  rule #...(pgm(\rewrite(comma(idAsIds(X : InferredSort), Xs : InferredSort), Xs : InferredSort), _ : InferredSort), state(comma@MAP(\equal(\and(M : InferredSort, in(X : InferredSort, keys(M : InferredSort))), false()), \rewrite(.Map(), bind(X : InferredSort, 0()))))) []
+  rule #...(\rewrite(pgmAsK(pgm(.Ids(), S : Stmt)), stmtAsK(S : InferredSort))) []
 endmodule []
 
   .

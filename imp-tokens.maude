@@ -5,7 +5,7 @@ mod IMP-TOKENS is
       IMP-SYNTAX IMP
     : -> ModuleName .
   ops Bool Int Set K KResult Map Id
-      AExp BExp Block Stmt Pgm Ids TopCell KCell StateCell
+      AExp BExp Block Stmt Pgm Ids TopCell KCell StateCell Whatever
     : -> Sort .
   ops kResultAsK
       bool true false not@BOOL

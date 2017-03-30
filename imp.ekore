@@ -131,7 +131,7 @@ module IMP-SYNTAX
   syntax BExp  ::= leq(AExp,AExp)        [seqstrict]
   axiom #context(\exists HOLE . #gamma(leq(#context(C,HOLE),A2)),A1)
       = leq(#context(C,A1),A2)           [seqstrict(leq,1)]
-  axiom isKResult(A1) = \true \implies
+  axiom isKResult(A1) = \top \implies
         #context(\exists HOLE . #gamma(leq(A1,#context(C,HOLE))),A2)
       = leq(A1,#context(C,A2))           [seqstrict(leq,2)]
   syntax BExp  ::= not(BExp)             [strict]

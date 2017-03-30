@@ -85,8 +85,8 @@ mod E-KORE is
 
 --- Variable inference needed
   subsort VariableName < Variable .
-  op ??? : -> Sort .
+  op InferredSort : -> Sort .
   var Vn : VariableName .
-  eq Vn = Vn : ??? .
+  eq Vn = Vn : InferredSort .
 endm
 

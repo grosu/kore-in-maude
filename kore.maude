@@ -9,7 +9,7 @@ endm
 mod MATCHING-LOGIC is
   including KSTRING .
 *** Basic term-like syntax for structure:
-  sorts Symbol Variable Pattern PatternList .
+  sorts Symbol Sort VariableName Variable Pattern PatternList .
   subsorts Variable < Pattern < PatternList .
   op _,_ : Pattern PatternList -> PatternList [prec 100 format(d d s d)] .
   op _`(_`) : Symbol PatternList -> Pattern   [prec 10 strat(2 0)] .
@@ -18,9 +18,10 @@ mod MATCHING-LOGIC is
   --- The strat attribute says that the symbol should never be
   --- evaluated; this is important because we want to later allow constant
   --- symbols in the E-KORE and then desugar them.
+  op _:_ : VariableName Sort -> Variable [strat(0)] .
 *** Logical constructs:
-  op \true : -> Pattern .
-  op \false : -> Pattern .
+  op \top : -> Pattern .
+  op \bottom : -> Pattern .
   op \and : Pattern Pattern -> Pattern .
   op \or : Pattern Pattern -> Pattern .
   op \not : Pattern -> Pattern .
@@ -67,7 +68,7 @@ mod KORE is
     [format(i d d d d d s d) prec 80 strat(3 0)] .
   --- strategy says that no desugaring happens in the first 2 arguments
 
-  sorts Sort SortList .
+  sort SortList .
   subsort Sort < SortList .
   op _,_ : Sort SortList -> SortList .
 
@@ -76,9 +77,5 @@ mod KORE is
 
   op axiom__ : Pattern Attributes -> Sentence
     [format(i d d d) prec 80] .
-
---- Sort "Sort" above and the next may need to go to MATCHING-LOGIC
-  sort VariableName .
-  op _:_ : VariableName Sort -> Variable [strat(0)] .
 endm
 
